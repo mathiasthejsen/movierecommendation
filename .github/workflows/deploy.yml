@@ -1,7 +1,8 @@
 # Weekly data pipeline + static site deploy to GitHub Pages.
 #
 # Triggers:
-#   * push to main          -> test, build and deploy the site (reuses the last published data)
+#   * push to main          -> test, build and deploy the site (reuses the last published data).
+#                              If no real data has been published yet, the pipeline runs first.
 #   * weekly schedule       -> run the data pipeline, publish data to the `data` branch, then build + deploy
 #   * manual (Run workflow) -> same as schedule; untick "run_pipeline" to only rebuild the site
 #
@@ -36,8 +37,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Decide whether this run refreshes the data. Manual runs only skip it when the box is
+  # explicitly unticked; pushes run it once, until the first real data has been published.
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_pipeline: ${{ steps.decide.outputs.run_pipeline }}
+    steps:
+      - id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT: ${{ github.event.inputs.run_pipeline }}
+          REPO: ${{ github.repository }}
+          TOKEN: ${{ github.token }}
+        run: |
+          run=false
+          if [ "$EVENT" = "schedule" ]; then
+            run=true
+          elif [ "$EVENT" = "workflow_dispatch" ] && [ "$INPUT" != "false" ]; then
+            run=true
+          elif [ "$EVENT" = "push" ] && ! git ls-remote --exit-code --heads "https://x-access-token:${TOKEN}@github.com/${REPO}.git" data >/dev/null 2>&1; then
+            echo "::notice::No published data yet (no 'data' branch); running the pipeline on this push."
+            run=true
+          fi
+          echo "run_pipeline=$run" >> "$GITHUB_OUTPUT"
+          echo "event=$EVENT input=${INPUT:-<none>} -> run_pipeline=$run"
+
   pipeline:
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_pipeline)
+    needs: plan
+    if: needs.plan.outputs.run_pipeline == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -117,8 +146,8 @@ jobs:
           du -sh .
 
   build:
-    needs: pipeline
-    if: always() && needs.pipeline.result != 'failure' && needs.pipeline.result != 'cancelled'
+    needs: [plan, pipeline]
+    if: always() && needs.plan.result == 'success' && needs.pipeline.result != 'failure' && needs.pipeline.result != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
