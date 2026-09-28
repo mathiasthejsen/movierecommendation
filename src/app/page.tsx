@@ -9,12 +9,14 @@ import { TitleCard } from "@/components/TitleCard";
 import { useAllPicks } from "@/components/usePicks";
 import { loadNeighbors } from "@/lib/artifact";
 import { ONBOARDING_TARGET } from "@/lib/config";
+import { isFollowed } from "@/lib/curators";
 import { indexPicks, preferenceWeight, rankRecommendations, tmdbFallbackEdges, type RankFilters } from "@/lib/ranking";
 import { activeRatings, activeWatchlist, useStore } from "@/lib/store";
 import { proxyRecommendations } from "@/lib/tmdbProxy";
 import type { Edge, Title, TitleKey } from "@/lib/types";
 
 const PAGE = 24;
+const FOLLOWED_MAX = 6;
 const FILTER_KEY = "movie-recommender:filters";
 const fallbackCache = new Map<TitleKey, { edges: Edge[]; titles: Title[] } | null>();
 
@@ -107,6 +109,11 @@ export default function FeedPage() {
     });
   }, [ready, extraTitles, snapshots, catalog, ratings, neighbors, meta, filters, picks, weights, hideWatchlist, watchlist]);
 
+  // Top recommendations picked by curators you follow get their own section.
+  const followedPicks = recs.filter((r) => r.curators.some(isFollowed)).slice(0, FOLLOWED_MAX);
+  const followedKeys = new Set(followedPicks.map((r) => r.title.key));
+  const rest = recs.filter((r) => !followedKeys.has(r.title.key));
+
   if (error) return <p className="error">Couldn&apos;t load the data artifact: {error}</p>;
   if (!ready) return <p className="muted">Loading…</p>;
 
@@ -131,14 +138,32 @@ export default function FeedPage() {
         <input type="checkbox" checked={hideWatchlist} onChange={(e) => setHideWatchlist(e.target.checked)} /> Hide titles on my
         watchlist
       </label>
-      {loadError ? <p className="error small">{loadError}</p> : null}
-      {recs.length === 0 ? (
+      {loadError ? (
+        <div className="notice small">
+          <p className="error">Couldn&apos;t load recommendation data ({loadError}). Check your connection.</p>
+          <button type="button" className="btn secondary" onClick={() => window.location.reload()}>
+            Retry
+          </button>
+        </div>
+      ) : null}
+      {followedPicks.length ? (
+        <section aria-labelledby="followed-heading">
+          <h2 id="followed-heading">📌 Picks by followed curators</h2>
+          <div className="list">
+            {followedPicks.map((r) => (
+              <TitleCard key={r.title.key} title={getTitle(r.title.key) ?? r.title} reason={r.reason} badges={r.gem ? ["💎 Gem"] : undefined} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+      <h2>{followedPicks.length ? "More for you" : "Recommended"}</h2>
+      {rest.length === 0 ? (
         <p className="muted">
           {ratings.length ? "No matches for these filters yet — try widening them or rating a few more titles." : "Nothing yet."}
         </p>
       ) : (
         <div className="list">
-          {recs.slice(0, shown).map((r) => (
+          {rest.slice(0, shown).map((r) => (
             <TitleCard
               key={r.title.key}
               title={getTitle(r.title.key) ?? r.title}
@@ -148,7 +173,7 @@ export default function FeedPage() {
           ))}
         </div>
       )}
-      {recs.length > shown ? (
+      {rest.length > shown ? (
         <p style={{ textAlign: "center" }}>
           <button type="button" className="btn secondary" onClick={() => setShown((n) => n + PAGE)}>
             Show more

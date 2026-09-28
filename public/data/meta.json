@@ -1,6 +1,6 @@
 {
  "version": 2,
- "generatedAt": "2026-09-28T10:24:00+00:00",
+ "generatedAt": "2026-09-28T10:54:41+00:00",
  "sample": true,
  "region": "US",
  "minYear": 1980,
@@ -38,23 +38,347 @@
  "providers": {
   "8": {
    "name": "Netflix",
-   "logo": null
+   "logo": "/rK1KljqmbvO9HQa1PBFLILWah72.png"
   },
-  "9": {
-   "name": "Amazon Prime Video",
-   "logo": null
-  },
-  "1899": {
-   "name": "Max",
-   "logo": null
+  "15": {
+   "name": "Hulu",
+   "logo": "/44uAnmSqvA4yBOdbPWN8YgQHjWm.png"
   },
   "337": {
    "name": "Disney Plus",
-   "logo": null
+   "logo": "/5eZ872CghnHFLB1j8grszbrx0dx.png"
+  },
+  "350": {
+   "name": "Apple TV",
+   "logo": "/9icYBfYFcwgCbky5VdGUIKJ4C5i.png"
+  },
+  "9": {
+   "name": "Amazon Prime Video",
+   "logo": "/gMZdpavHmxFNnLpMHwVxfqeux2g.png"
+  },
+  "457": {
+   "name": "VIX ",
+   "logo": "/ieJ55scAVrvboTpeJcZa3JlLIrS.png"
+  },
+  "257": {
+   "name": "fuboTV",
+   "logo": "/3wF8xISfVlcrc8X3jaa3uMUFGAr.png"
+  },
+  "1825": {
+   "name": "HBO Max Amazon Channel",
+   "logo": "/64fLWeSyZ1KQZhIdvTdy4QHeWty.png"
+  },
+  "283": {
+   "name": "Crunchyroll",
+   "logo": "/uFL3c4Cq8M6WoLymlC5Y8bmGytV.png"
+  },
+  "538": {
+   "name": "Plex",
+   "logo": "/blAEhvx3XX8sV0fFVFk88FFjubs.png"
+  },
+  "583": {
+   "name": "MGM+ Amazon Channel",
+   "logo": "/gk7O3l9qHttE9F3hgDNnhbhlOs7.png"
+  },
+  "2303": {
+   "name": "Paramount Plus Premium",
+   "logo": "/4N4BMd0Mm0kHAmF7RZgL5lW3cwc.png"
+  },
+  "2616": {
+   "name": "Paramount Plus Essential",
+   "logo": "/uPWQPyF4nqwtfPNmGcFcenU57HG.png"
   },
   "11": {
    "name": "MUBI",
-   "logo": null
+   "logo": "/k7iSlvgWzZuO4zU5PcBjhABMuia.png"
+  },
+  "386": {
+   "name": "Peacock Premium",
+   "logo": "/a1UIdq5BrkcAxnxcUhFsNbXnxeu.png"
+  },
+  "2383": {
+   "name": "Philo",
+   "logo": "/mfbhzQwmQKjm7bLZPF5CTeu3Ilc.png"
+  },
+  "300": {
+   "name": "Pluto TV",
+   "logo": "/fN4czqaMQNLeF6sSSIjGbAWzvwK.png"
+  },
+  "1968": {
+   "name": "Crunchyroll Amazon Channel",
+   "logo": "/qHLLmKo7udRgiSnIASVTwP2IxfJ.png"
+  },
+  "1854": {
+   "name": "AMC Plus Apple TV channel",
+   "logo": "/wLl5LRLVC6UOSaUlsmuzY0H9LS1.png"
+  },
+  "1852": {
+   "name": "Britbox Apple TV channel",
+   "logo": "/r5LXOt96llVEmgwAQeheJuxUaMR.png"
+  },
+  "582": {
+   "name": "Paramount+ Amazon Channel",
+   "logo": "/bxX0YVOCY7bI85BKRlJAAQ2EjUR.png"
+  },
+  "1853": {
+   "name": "Paramount Plus Apple TV channel",
+   "logo": "/xu4LyKTwasTbta1Z0qWtZG48yZ3.png"
+  },
+  "528": {
+   "name": "AMC+ Amazon Channel",
+   "logo": "/tg5ufQ1GkYDCMxSSxemfeKWcvRe.png"
+  },
+  "1899": {
+   "name": "HBO Max",
+   "logo": "/skypuy7SXuugIQeYg0IglmzoKaS.png"
+  },
+  "207": {
+   "name": "The Roku Channel",
+   "logo": "/b7uhrYJtAe7b1ieJGg705vTbwrX.png"
+  },
+  "526": {
+   "name": "AMC+",
+   "logo": "/wsCUflcmL4dCkzBUaGP8cj1cTkh.png"
+  },
+  "636": {
+   "name": "MGM Plus Roku Premium Channel",
+   "logo": "/surh9i8VYeeq9186fKHnUg5Q5dg.png"
+  },
+  "83": {
+   "name": "The CW",
+   "logo": "/6fcYLKQIjGnrswtH7WxjjoSiyy3.png"
+  },
+  "191": {
+   "name": "Kanopy",
+   "logo": "/cltb8XKan9ierp23ItPmCOcVLRa.png"
+  },
+  "212": {
+   "name": "Hoopla",
+   "logo": "/gtjNBzAoGgUtYzt0UKXmwG34WWL.png"
+  },
+  "2528": {
+   "name": "YouTube TV",
+   "logo": "/48bVXEIyCLSL9pZUQ7gB9ToyWto.png"
+  },
+  "332": {
+   "name": "Fandango at Home Free",
+   "logo": "/wpOt6x0dRxTrIzuBosto4LGd7E9.png"
+  },
+  "258": {
+   "name": "Criterion Channel",
+   "logo": "/32XVilXkVbrwV96O3N5i0rtuyd6.png"
+  },
+  "209": {
+   "name": "PBS",
+   "logo": "/kwKCUFjKjq1GlZeIjImBV62IypB.png"
+  },
+  "123": {
+   "name": "FXNow",
+   "logo": "/a7ZF6Ng3d6KDMylLUMH1OjAeTqW.png"
+  },
+  "80": {
+   "name": "AMC",
+   "logo": "/4lMb5R5cpg7o2GZOxI7CgxoU9Jr.png"
+  },
+  "25": {
+   "name": "Fandor",
+   "logo": "/vR0RxwoqbM0ZP10LR3uT6rpuamc.png"
+  },
+  "34": {
+   "name": "MGM Plus",
+   "logo": "/q63Uzpu7JAs566vA2G23Lk7LcID.png"
+  },
+  "99": {
+   "name": "Shudder",
+   "logo": "/58O6yqUFM6qoOiBNAddJs7xNKc.png"
+  },
+  "143": {
+   "name": "Sundance Now",
+   "logo": "/uSoP5JLrUjHWDFikg9EJKcm7IvQ.png"
+  },
+  "151": {
+   "name": "BritBox",
+   "logo": "/eZeWGG6DDIi4Kmu1z9RfTeZtqZX.png"
+  },
+  "633": {
+   "name": "Paramount+ Roku Premium Channel",
+   "logo": "/tnZCMxbcKdxuVmjxefyXCaip7q3.png"
+  },
+  "289": {
+   "name": "Cinemax Amazon Channel",
+   "logo": "/vJBXVX2REOqNrWlwgnBuQX4pQK6.png"
+  },
+  "294": {
+   "name": "PBS Masterpiece Amazon Channel",
+   "logo": "/aZASQOdPFvGnXiJ015OVGVJ9vt7.png"
+  },
+  "455": {
+   "name": "Night Flight Plus",
+   "logo": "/acUxuVlP96MVPbUdxdGu0pUHTht.png"
+  },
+  "439": {
+   "name": "Shout! Factory TV",
+   "logo": "/ezTLm8lPMse9QRKTYInPOBD2jUM.png"
+  },
+  "204": {
+   "name": "Shudder Amazon Channel",
+   "logo": "/yb4PbHPVpvJ2JizOuZoJSLXsjcG.png"
+  },
+  "201": {
+   "name": "MUBI Amazon Channel",
+   "logo": "/w1hl8HszsPf5aAGT0mVY0O6LYP4.png"
+  },
+  "197": {
+   "name": "BritBox Amazon Channel",
+   "logo": "/dneArfNvYnCY0LQwDs6n0wVLpPh.png"
+  },
+  "1794": {
+   "name": "Starz Amazon Channel",
+   "logo": "/adymMNlhhLlJl5xccRCrsh3OehD.png"
+  },
+  "199": {
+   "name": "Fandor Amazon Channel",
+   "logo": "/pqV8nzIxmOKVDsDrQ5wCPYuSM5P.png"
+  },
+  "202": {
+   "name": "Screambox Amazon Channel",
+   "logo": "/zRn4rBGPYDeZvTeZEBySDdqHzS8.png"
+  },
+  "235": {
+   "name": "YouTube Free",
+   "logo": "/gqaJWT5oFiJyVDojVLYRSFPbhQ1.png"
+  },
+  "361": {
+   "name": "TCM",
+   "logo": "/7LA3wg2A01nyV3PCLN01WNOVhcT.png"
+  },
+  "363": {
+   "name": "TNT",
+   "logo": "/6cgMswJ1yXtJLP1uJhM476h2WTH.png"
+  },
+  "506": {
+   "name": "TBS",
+   "logo": "/8MX4rbkjJUf2NMb2ZVwHq0IATJf.png"
+  },
+  "486": {
+   "name": "Spectrum On Demand",
+   "logo": "/6qPtM96UZkt3Bu4ZFPsDeHFWUZ2.png"
+  },
+  "507": {
+   "name": "tru TV",
+   "logo": "/sksAwn7y5P55CNGZ2znVuwLNM8S.png"
+  },
+  "2077": {
+   "name": "Plex Channel",
+   "logo": "/1gC0K43JMyMtVpqczxvwBp0pkxn.png"
+  },
+  "613": {
+   "name": "Amazon Prime Video Free with Ads",
+   "logo": "/fuVBtr57kxnYzOILZ38xqSmBeyR.png"
+  },
+  "2409": {
+   "name": "Fawesome",
+   "logo": "/dNF4vWhF3TduWvOyfVxEyTqSNRl.png"
+  },
+  "1796": {
+   "name": "Netflix Standard with Ads",
+   "logo": "/eGUwOOIxcazwEBxqJpSN5sWEu6V.png"
+  },
+  "1866": {
+   "name": "ViX Premium Amazon Channel",
+   "logo": "/dZn7SR1rarhMVKnO0OXCAvMjbcv.png"
+  },
+  "1957": {
+   "name": "Cineverse",
+   "logo": "/rqCIpmrCBpnL6oliak6E1mrq5DD.png"
+  },
+  "2358": {
+   "name": "Lionsgate+ Amazon Channels",
+   "logo": "/1356slxu4QrHOMrEVDKHJXRo5sW.png"
+  },
+  "1963": {
+   "name": "Xumo Play",
+   "logo": "/n6E9OeoQicCDd43PnLsMpVIVYFK.png"
+  },
+  "2049": {
+   "name": "Shudder Apple TV channel",
+   "logo": "/56UClPygDruoT7kvuPeIMJC59Zx.png"
+  },
+  "2061": {
+   "name": "Cinemax Apple TV channel",
+   "logo": "/eArBCdklkA9DKiESboGkyv3rVQ7.png"
+  },
+  "2100": {
+   "name": "Amazon Prime Video with Ads",
+   "logo": "/tpwTT1FpWqLLhxUfAuDavIXDDfI.png"
+  },
+  "1855": {
+   "name": "Starz Apple TV channel",
+   "logo": "/lgxDo2a3iGr617vm1rf0k5Hc8jz.png"
+  },
+  "387": {
+   "name": "Peacock Premium Plus",
+   "logo": "/yrEwyMzEKdqAoGhaWUARtIxByol.png"
+  },
+  "2243": {
+   "name": "Apple TV Amazon Channel",
+   "logo": "/rerVCu9auZrgxTTiZu1criqrQzg.png"
+  },
+  "2367": {
+   "name": "Midnight Pulp Amazon Channel",
+   "logo": "/uqAgFY1AoqdcsDVLzMCpoQqzJ2u.png"
+  },
+  "2418": {
+   "name": "Magnolia Selects Amazon Channel",
+   "logo": "/jGDWtSHBVsAAwJbLONwxR0SquXf.png"
+  },
+  "2419": {
+   "name": "Monsters and Nightmares Amazon Channel",
+   "logo": "/pcSzaYgwXvQaoPYqtrPXu6nrEdW.png"
+  },
+  "600": {
+   "name": "Shout! Factory Amazon Channel",
+   "logo": "/ydhPmamP2uIMipgq8qIEfmcw2hT.png"
+  },
+  "73": {
+   "name": "Tubi TV",
+   "logo": "/9dEuvA8wg5TSeFBZlPxSVxFdimJ.png"
+  },
+  "2621": {
+   "name": "KQED",
+   "logo": "/gq031DkuykfuuHVoLPx9BFNyfPU.png"
+  },
+  "2622": {
+   "name": "Thirteen",
+   "logo": "/dQKjAyrGlA3HPbDs4hp8RyaXUiK.png"
+  },
+  "2657": {
+   "name": "WETA+",
+   "logo": "/fwzxYZXp5T57T2WaazFhzArAmYd.png"
+  },
+  "2667": {
+   "name": "YOW.tv",
+   "logo": "/oMEvAYpfx85D9HHQzXqFbHC0S6F.png"
+  },
+  "2668": {
+   "name": "Wonder Project Amazon Channel",
+   "logo": "/q44PU5iFUrxhOLKW19BrPuEN6Go.png"
+  },
+  "2704": {
+   "name": "Cineverse Amazon Channel",
+   "logo": "/mkikn40hHk3K3Xis19dnzyRnHBB.png"
+  },
+  "2745": {
+   "name": "Sony Pictures Core Amazon Channel",
+   "logo": "/uNyIRlzYb0Hf7Ix6Q3MKms0ERgA.png"
+  },
+  "2754": {
+   "name": "Howdy Amazon Channel",
+   "logo": "/dI7GHS1st3jWH8eW21x5YnJdUFN.png"
+  },
+  "1898": {
+   "name": "Amazon MX Player",
+   "logo": "/46U3TOB3PhVDjA7qaFOuYSaGMiq.png"
   }
  },
  "attribution": {

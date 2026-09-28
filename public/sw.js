@@ -2,7 +2,7 @@
  * Scope and cache paths derive from the registration scope, so it works under any base path
  * (e.g. https://<user>.github.io/movie-recommender/).
  */
-const VERSION = "v2";
+const VERSION = "v3";
 const SCOPE = new URL(self.registration.scope);
 const BASE = SCOPE.pathname; // ends with "/"
 const SHELL = `shell-${VERSION}`;
@@ -69,7 +69,7 @@ async function staleWhileRevalidate(request, cacheName) {
       if (res.ok) cache.put(request, res.clone());
       return res;
     })
-    .catch(() => cached);
+    .catch(() => cached || new Response(JSON.stringify({ error: "offline" }), { status: 503, headers: { "Content-Type": "application/json" } }));
   return cached || network;
 }
 

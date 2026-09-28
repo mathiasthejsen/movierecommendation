@@ -37,3 +37,12 @@ export function curatorAliases(): Record<string, string> {
 }
 
 export const HANDLE_RE = /^[A-Za-z0-9._]{1,30}$/;
+
+/**
+ * Curators you follow: your own entries in config/curators.json (own: true, enabled),
+ * plus any handle you've shared picks from that isn't in the config.
+ */
+export function isFollowed(handle: string): boolean {
+  const c = CURATORS.find((x) => x.handle === handle);
+  return c ? c.own && c.enabled : true;
+}

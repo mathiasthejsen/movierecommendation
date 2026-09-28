@@ -39,9 +39,22 @@ def run_sample(cfg: Config) -> int:
     tmdb_edges: dict[tuple[str, str], float] = {}
     for key, recs in sample.simulated_tmdb_recommendations(tv_seed).items():
         tmdb_edges.update(tmdb_rank_edges(key, recs, []))
+    details = sample.sample_details(seed)
+    genres, providers = TMDB_GENRES, sample.SAMPLE_PROVIDERS
+    if cfg.has_tmdb:
+        # Optional: with a TMDB key, the sample gets real posters, overviews and providers.
+        from .tmdb import TMDBClient
+
+        client = TMDBClient(cfg.tmdb_api_key, cfg.tmdb_read_token, cfg.cache_dir)
+        for key in list(details):
+            real = client.details(key)
+            if real:
+                details[key] = real
+        genres, providers = {**TMDB_GENRES, **client.genres()}, client.providers(cfg.watch_region)
+        log.info("Enriched sample with TMDB metadata (%d requests)", client.requests_made)
     titles = {
         key: t
-        for key, d in sample.sample_details(seed).items()
+        for key, d in details.items()
         if (t := title_from_details(d, cfg.watch_region)) and t.year >= cfg.min_year
     }
     curators = cur.load_curators()
@@ -53,7 +66,7 @@ def run_sample(cfg: Config) -> int:
     neighbors = merge_edges(ml_neighbors, reddit_edges, tmdb_edges, set(titles), cap=cfg.top_k + 20)
     size = write_artifact(
         cfg.output_dir, titles, neighbors, shards=4, region=cfg.watch_region, min_year=cfg.min_year, sample=True,
-        genres=TMDB_GENRES, providers=sample.SAMPLE_PROVIDERS,
+        genres=genres, providers=providers,
         counts={
             "movielensEdges": sum(map(len, ml_neighbors.values())), "redditEdges": len(reddit_edges),
             "tmdbEdges": len(tmdb_edges), "traktEdges": 0,

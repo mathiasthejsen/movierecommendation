@@ -8,17 +8,36 @@ import type { Title } from "@/lib/types";
 import { useApp } from "./AppProvider";
 import { RatingControl } from "./RatingControl";
 
+function hue(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h % 360;
+}
+
+/** Generated stand-in poster when TMDB has no image (or it fails to load, e.g. offline). */
+function PlaceholderPoster({ title }: { title: Title }) {
+  const h = hue(title.key);
+  return (
+    <div
+      className="poster placeholder"
+      aria-hidden
+      style={{ background: `linear-gradient(160deg, hsl(${h} 45% 32%), hsl(${(h + 40) % 360} 40% 14%))` }}
+    >
+      <span className="ph-title">{title.title}</span>
+      <span className="ph-year">
+        {title.year || ""}
+        {title.type === "tv" ? " · TV" : ""}
+      </span>
+    </div>
+  );
+}
+
 export function Poster({ title, size = "w342" }: { title: Title; size?: "w185" | "w342" }) {
   const url = posterUrl(title.poster, size);
-  if (!url) {
-    return (
-      <div className="poster placeholder" aria-hidden>
-        <span>{title.title}</span>
-      </div>
-    );
-  }
+  const [failed, setFailed] = useState(false);
+  if (!url || failed) return <PlaceholderPoster title={title} />;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img className="poster" src={url} alt="" loading="lazy" decoding="async" />;
+  return <img className="poster" src={url} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />;
 }
 
 export function TypeBadge({ title }: { title: Title }) {
@@ -77,7 +96,11 @@ export function TitleCard({ title, reason, badges }: { title: Title; reason?: st
         <TitleMeta title={title} />
         {reason ? <p className="reason">{reason}</p> : null}
         <Providers title={title} />
-        {open && title.overview ? <p className="overview">{title.overview}</p> : null}
+        {title.overview ? (
+          <p className={open ? "overview" : "overview clamp"} onClick={() => setOpen((o) => !o)}>
+            {title.overview}
+          </p>
+        ) : null}
         <div className="actions">
           <RatingControl title={title} />
           <button

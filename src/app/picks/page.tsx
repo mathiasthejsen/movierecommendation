@@ -7,7 +7,7 @@ import { CuratorInput, isValidHandle } from "@/components/CuratorInput";
 import { Poster, TitleCard, TypeBadge } from "@/components/TitleCard";
 import { MediaToggle, SearchStatus, useTitleSearch, type SearchType } from "@/components/TitleSearch";
 import { useAllPicks } from "@/components/usePicks";
-import { CURATORS } from "@/lib/curators";
+import { CURATORS, isFollowed } from "@/lib/curators";
 import { activePicks, addPicks, removePick, useStore } from "@/lib/store";
 import { supabaseConfigured } from "@/lib/config";
 import type { Title } from "@/lib/types";
@@ -49,6 +49,32 @@ function AddPickForm() {
   );
 }
 
+interface PickGroup {
+  title: Title;
+  curators: Set<string>;
+  followed: boolean;
+}
+
+function PickSection({ heading, groups, empty }: { heading: string; groups: PickGroup[]; empty: string }) {
+  if (!groups.length && !empty) return null;
+  return (
+    <section>
+      <h2>{heading}</h2>
+      {groups.length ? (
+        <div className="list">
+          {groups.map((g) => {
+            // Followed curators first in the reason line.
+            const handles = [...g.curators].sort((a, b) => Number(isFollowed(b)) - Number(isFollowed(a)));
+            return <TitleCard key={g.title.key} title={g.title} reason={`Picked by ${handles.map((h) => `@${h}`).join(", ")}`} />;
+          })}
+        </div>
+      ) : (
+        <p className="muted">{empty}</p>
+      )}
+    </section>
+  );
+}
+
 export default function PicksPage() {
   const { ready, getTitle, session } = useApp();
   const { picks } = useAllPicks();
@@ -57,13 +83,14 @@ export default function PicksPage() {
   const [curatorFilter, setCuratorFilter] = useState("");
 
   const grouped = useMemo(() => {
-    const byKey = new Map<string, { title: Title; curators: Set<string> }>();
+    const byKey = new Map<string, PickGroup>();
     for (const p of picks) {
       if (curatorFilter && p.curator !== curatorFilter) continue;
       const t = getTitle(p.key);
       if (!t) continue;
-      const g = byKey.get(p.key) ?? { title: t, curators: new Set<string>() };
+      const g = byKey.get(p.key) ?? { title: t, curators: new Set<string>(), followed: false };
       g.curators.add(p.curator);
+      g.followed ||= isFollowed(p.curator);
       byKey.set(p.key, g);
     }
     return [...byKey.values()].sort((a, b) => b.curators.size - a.curators.size || b.title.votes - a.title.votes);
@@ -127,22 +154,13 @@ export default function PicksPage() {
           </div>
         </>
       ) : null}
-      <h2>All picks</h2>
-      {grouped.length ? (
-        <div className="list">
-          {grouped.map((g) => (
-            <TitleCard
-              key={g.title.key}
-              title={g.title}
-              reason={`Picked by ${[...g.curators].map((h) => `@${h}`).join(", ")}`}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="muted">
-          No picks yet. Try sharing a post to the app, or see <Link href="/account/">Me</Link> to install it first.
+      <PickSection heading="📌 Picks by followed curators" groups={grouped.filter((g) => g.followed)} empty="No picks from the curators you follow yet — share a post to the app or add one above." />
+      <PickSection heading="Picks by other curators" groups={grouped.filter((g) => !g.followed)} empty="" />
+      {!grouped.length ? (
+        <p className="muted small">
+          Tip: see <Link href="/account/">Me</Link> for how to install the app so it appears in your phone&apos;s Share sheet.
         </p>
-      )}
+      ) : null}
     </>
   );
 }

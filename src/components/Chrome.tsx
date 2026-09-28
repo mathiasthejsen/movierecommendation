@@ -7,7 +7,8 @@ export function SampleBanner() {
   if (!meta?.sample) return null;
   return (
     <div className="banner" role="note">
-      Sample data: a small built-in catalogue with synthetic scores. Run the data pipeline for real recommendations.
+      Demo catalogue ({meta.counts.titles ?? meta.counts.movies} titles). Posters and details are real, but similarity scores
+      are synthetic. Run the data pipeline for real recommendations.
     </div>
   );
 }
