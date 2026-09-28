@@ -133,12 +133,20 @@ export default function FeedPage() {
   }, [ready, extraTitles, snapshots, catalog, ratings, neighbors, meta, filters, picks, weights, hideWatchlist, watchlist]);
 
   const initialLoaded = ready && (neighborsLoaded || ratedKeys.length === 0);
-  const pinTrigger = `${generation}|${JSON.stringify(filters)}|${hideWatchlist}|${initialLoaded}`;
+  const filtersSig = JSON.stringify(filters);
+  const currentList = (t: Tab, r: typeof recs) => (t === "ratings" ? r.taste : r.curators);
+
+  // First pin, once the data is ready. After that the list never re-ranks by itself:
+  // rating a card leaves it in place (dimmed) and offers "Update recommendations".
   useEffect(() => {
-    if (initialLoaded) setPinned({ ...recs, sig: ratedSig });
-    // Deliberately not depending on recs/ratedSig: re-pin only on explicit triggers.
+    if (!pinned && initialLoaded) setPinned({ ...recs, sig: ratedSig });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pinTrigger]);
+  }, [initialLoaded, pinned]);
+  // Explicit re-rank triggers: the Update button, filter changes, the watchlist toggle.
+  useEffect(() => {
+    if (pinned) setPinned({ ...recs, sig: ratedSig });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generation, filtersSig, hideWatchlist]);
   // Offer a re-rank once the new rating's neighbour data has loaded (no ratings left = nothing to load).
   const stale = Boolean(pinned && pinned.sig !== ratedSig && (loadedSig === ratedSig || ratedKeys.length === 0));
   const refresh = () => {
@@ -148,17 +156,28 @@ export default function FeedPage() {
   };
 
   const [tab, setTab] = useState<Tab | null>(null);
+  // The default tab is decided once, when the list first appears, so a first rating doesn't flip it.
+  const [autoTab, setAutoTab] = useState<Tab | null>(null);
   useEffect(() => {
     const saved = localStorage.getItem(TAB_KEY);
     setTab(saved === "ratings" || saved === "curators" ? saved : null);
   }, []);
-  // Default: ratings once you've rated something, curators before that.
-  const activeTab: Tab = tab ?? (ratings.length ? "ratings" : "curators");
+  useEffect(() => {
+    if (pinned && !autoTab) setAutoTab(pinned.taste.length ? "ratings" : "curators");
+  }, [pinned, autoTab]);
+  const activeTab: Tab = tab ?? autoTab ?? (ratings.length ? "ratings" : "curators");
   const chooseTab = (t: Tab) => {
     setTab(t);
     setShown(PAGE);
     localStorage.setItem(TAB_KEY, t);
   };
+
+  // Nothing on screen to shift yet (e.g. first ratings on an empty tab): show new results right away.
+  useEffect(() => {
+    if (!pinned || !stale) return;
+    if (currentList(activeTab, pinned).length === 0 && currentList(activeTab, recs).length > 0) setGeneration((g) => g + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stale, activeTab]);
 
   const tasteList = pinned?.taste ?? [];
   const curatorList = pinned?.curators ?? [];
