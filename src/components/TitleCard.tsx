@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { posterUrl } from "@/lib/config";
 import { tmdbUrl } from "@/lib/keys";
 import { toggleWatchlist, useStore } from "@/lib/store";
@@ -89,13 +89,31 @@ export function TitleCard({
   dimWhenRated?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const overviewRef = useRef<HTMLParagraphElement>(null);
   const rated = useStore((s) => Boolean(s.ratings[title.key] && !s.ratings[title.key].deleted));
   const inWatchlist = useStore((s) => Boolean(s.watchlist[title.key] && !s.watchlist[title.key].deleted));
+
+  // Only offer "More" when the 2-line clamp actually hides text.
+  useLayoutEffect(() => {
+    const el = overviewRef.current;
+    if (el && !open) setOverflows(el.scrollHeight > el.clientHeight + 1);
+  }, [title.overview, open]);
+
+  const expandable = overflows || open;
+  const toggle = () => expandable && setOpen((o) => !o);
+  // The whole card toggles, except its own controls (rating, watchlist, links).
+  const onCardClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, a, input, select, label")) return;
+    toggle();
+  };
+
+  const classes = ["card", expandable ? "expandable" : "", dimWhenRated && rated ? "rated" : ""].filter(Boolean).join(" ");
   return (
-    <article className={dimWhenRated && rated ? "card rated" : "card"}>
-      <button type="button" className="card-poster" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+    <article className={classes} onClick={onCardClick}>
+      <div className="card-poster">
         <Poster title={title} />
-      </button>
+      </div>
       <div className="card-body">
         <h3>
           {title.title} <TypeBadge title={title} />
@@ -109,9 +127,16 @@ export function TitleCard({
         {reason ? <p className="reason">{reason}</p> : null}
         <Providers title={title} />
         {title.overview ? (
-          <p className={open ? "overview" : "overview clamp"} onClick={() => setOpen((o) => !o)}>
-            {title.overview}
-          </p>
+          <>
+            <p ref={overviewRef} className={open ? "overview" : "overview clamp"} id={`ov-${title.key}`}>
+              {title.overview}
+            </p>
+            {expandable ? (
+              <button type="button" className="more-toggle" aria-expanded={open} aria-controls={`ov-${title.key}`} onClick={toggle}>
+                {open ? "Less ▴" : "More ▾"}
+              </button>
+            ) : null}
+          </>
         ) : null}
         <div className="actions">
           <RatingControl title={title} />

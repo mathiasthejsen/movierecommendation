@@ -23,7 +23,8 @@ import { proxyRecommendations } from "@/lib/tmdbProxy";
 import type { Edge, Title, TitleKey } from "@/lib/types";
 
 const PAGE = 24;
-const FOLLOWED_MAX = 6;
+const TAB_KEY = "movie-recommender:feed-tab";
+type Tab = "ratings" | "curators";
 const FILTER_KEY = "movie-recommender:filters";
 const fallbackCache = new Map<TitleKey, { edges: Edge[]; titles: Title[] } | null>();
 
@@ -49,7 +50,7 @@ export default function FeedPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   // The visible list is "pinned": rating a card doesn't reshuffle the feed under your finger.
   // It re-ranks only on filter changes, first data load, or when you tap "Update recommendations".
-  const [pinned, setPinned] = useState<{ list: Recommendation[]; sig: string } | null>(null);
+  const [pinned, setPinned] = useState<{ taste: Recommendation[]; curators: Recommendation[]; sig: string } | null>(null);
   const [generation, setGeneration] = useState(0);
   const [neighborsLoaded, setNeighborsLoaded] = useState(false);
   const [loadedSig, setLoadedSig] = useState("");
@@ -112,23 +113,29 @@ export default function FeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, ratedSig, session?.user.id]);
 
+  // Two independent rankings: pure taste (no curator influence) and curator picks only.
   const recs = useMemo(() => {
-    if (!ready) return [];
+    if (!ready) return { taste: [] as Recommendation[], curators: [] as Recommendation[] };
     const merged = new Map<TitleKey, Title>([...extraTitles, ...Object.entries(snapshots), ...catalog]);
     const weightsByKey = new Map(ratings.map((r) => [r.key, preferenceWeight(r.kind, r.value)]));
-    return rankRecommendations(weightsByKey, neighbors, merged, {
+    const base = {
       minYear: meta?.minYear ?? 1980,
-      filters,
+      exclude: hideWatchlist ? watchlist.map((w) => w.key) : [],
+    };
+    const taste = rankRecommendations(weightsByKey, neighbors, merged, { ...base, filters: { ...filters, curatedOnly: false } });
+    const curators = rankRecommendations(weightsByKey, neighbors, merged, {
+      ...base,
+      filters: { ...filters, curatedOnly: true },
       picks: indexPicks(picks),
       curatorWeights: weights,
-      exclude: hideWatchlist ? watchlist.map((w) => w.key) : [],
     });
+    return { taste, curators };
   }, [ready, extraTitles, snapshots, catalog, ratings, neighbors, meta, filters, picks, weights, hideWatchlist, watchlist]);
 
   const initialLoaded = ready && (neighborsLoaded || ratedKeys.length === 0);
   const pinTrigger = `${generation}|${JSON.stringify(filters)}|${hideWatchlist}|${initialLoaded}`;
   useEffect(() => {
-    if (initialLoaded) setPinned({ list: recs, sig: ratedSig });
+    if (initialLoaded) setPinned({ ...recs, sig: ratedSig });
     // Deliberately not depending on recs/ratedSig: re-pin only on explicit triggers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pinTrigger]);
@@ -139,17 +146,41 @@ export default function FeedPage() {
     setShown(PAGE);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  const visible = pinned?.list ?? [];
 
-  // Top recommendations picked by curators you follow get their own section.
-  const followedPicks = visible.filter((r) => r.curators.some(isFollowed)).slice(0, FOLLOWED_MAX);
-  const followedKeys = new Set(followedPicks.map((r) => r.title.key));
-  const rest = visible.filter((r) => !followedKeys.has(r.title.key));
+  const [tab, setTab] = useState<Tab | null>(null);
+  useEffect(() => {
+    const saved = localStorage.getItem(TAB_KEY);
+    setTab(saved === "ratings" || saved === "curators" ? saved : null);
+  }, []);
+  // Default: ratings once you've rated something, curators before that.
+  const activeTab: Tab = tab ?? (ratings.length ? "ratings" : "curators");
+  const chooseTab = (t: Tab) => {
+    setTab(t);
+    setShown(PAGE);
+    localStorage.setItem(TAB_KEY, t);
+  };
+
+  const tasteList = pinned?.taste ?? [];
+  const curatorList = pinned?.curators ?? [];
+  const followed = curatorList.filter((r) => r.curators.some(isFollowed));
+  const others = curatorList.filter((r) => !r.curators.some(isFollowed));
 
   if (error) return <p className="error">Couldn&apos;t load the data artifact: {error}</p>;
   if (!ready) return <p className="muted">Loading…</p>;
 
   const needsOnboarding = ratings.length < 5;
+  const card = (r: Recommendation) => (
+    <TitleCard key={r.title.key} title={getTitle(r.title.key) ?? r.title} reason={r.reason} badges={r.gem ? ["💎 Gem"] : undefined} dimWhenRated />
+  );
+  const more = (total: number) =>
+    total > shown ? (
+      <p style={{ textAlign: "center" }}>
+        <button type="button" className="btn secondary" onClick={() => setShown((n) => n + PAGE)}>
+          Show more
+        </button>
+      </p>
+    ) : null;
+
   return (
     <>
       <h1>For you</h1>
@@ -165,6 +196,14 @@ export default function FeedPage() {
           </Link>
         </div>
       ) : null}
+      <div className="segmented tabs" role="tablist" aria-label="Recommendation source">
+        <button type="button" role="tab" aria-selected={activeTab === "ratings"} className={activeTab === "ratings" ? "on" : ""} onClick={() => chooseTab("ratings")}>
+          ⭐ Based on my ratings
+        </button>
+        <button type="button" role="tab" aria-selected={activeTab === "curators"} className={activeTab === "curators" ? "on" : ""} onClick={() => chooseTab("curators")}>
+          📌 From curators
+        </button>
+      </div>
       <Filters value={filters} onChange={updateFilters} />
       <label className="row small muted" style={{ marginBottom: 10 }}>
         <input type="checkbox" checked={hideWatchlist} onChange={(e) => setHideWatchlist(e.target.checked)} /> Hide titles on my
@@ -178,47 +217,51 @@ export default function FeedPage() {
           </button>
         </div>
       ) : null}
-      {followedPicks.length ? (
-        <section aria-labelledby="followed-heading">
-          <h2 id="followed-heading">📌 Picks by followed curators</h2>
-          <div className="list">
-            {followedPicks.map((r) => (
-              <TitleCard key={r.title.key} title={getTitle(r.title.key) ?? r.title} reason={r.reason} badges={r.gem ? ["💎 Gem"] : undefined} dimWhenRated />
-            ))}
-          </div>
-        </section>
-      ) : null}
-      <h2>{followedPicks.length ? "More for you" : "Recommended"}</h2>
+
       {!pinned ? (
         <p className="muted">Loading recommendations…</p>
-      ) : rest.length === 0 ? (
-        <p className="muted">
-          {ratings.length ? "No matches for these filters yet — try widening them or rating a few more titles." : "Nothing yet."}
-        </p>
+      ) : activeTab === "ratings" ? (
+        <section role="tabpanel" aria-label="Based on my ratings">
+          <p className="muted small">Titles similar to what you rated (MovieLens, TMDB, Reddit). Curators don&apos;t affect this list.</p>
+          {tasteList.length === 0 ? (
+            <p className="muted">
+              {ratings.length
+                ? "No matches for these filters yet — try widening them or rating a few more titles."
+                : "Rate a few movies or shows to get recommendations here."}
+            </p>
+          ) : (
+            <div className="list">{tasteList.slice(0, shown).map(card)}</div>
+          )}
+          {more(tasteList.length)}
+        </section>
       ) : (
-        <div className="list">
-          {rest.slice(0, shown).map((r) => (
-            <TitleCard
-              key={r.title.key}
-              title={getTitle(r.title.key) ?? r.title}
-              reason={r.reason}
-              badges={r.gem ? ["💎 Gem"] : undefined}
-              dimWhenRated
-            />
-          ))}
-        </div>
+        <section role="tabpanel" aria-label="From curators">
+          <p className="muted small">
+            Titles your curators picked, ordered by how well they fit your ratings. Edit curators in config/curators.json.
+          </p>
+          <h2>📌 Picks by followed curators</h2>
+          {followed.length ? (
+            <div className="list">{followed.slice(0, shown).map(card)}</div>
+          ) : (
+            <p className="muted">
+              No picks from the curators you follow yet. Share a post to the app or use <Link href="/picks/">Picks → Add pick</Link>.
+            </p>
+          )}
+          {more(followed.length)}
+          {others.length ? (
+            <>
+              <h2>Picks by other curators</h2>
+              <div className="list">{others.slice(0, shown).map(card)}</div>
+              {more(others.length)}
+            </>
+          ) : null}
+        </section>
       )}
+
       {stale ? (
         <button type="button" className="btn refresh-bar" onClick={refresh}>
           ↻ Update recommendations
         </button>
-      ) : null}
-      {rest.length > shown ? (
-        <p style={{ textAlign: "center" }}>
-          <button type="button" className="btn secondary" onClick={() => setShown((n) => n + PAGE)}>
-            Show more
-          </button>
-        </p>
       ) : null}
     </>
   );

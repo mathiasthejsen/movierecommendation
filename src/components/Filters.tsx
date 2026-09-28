@@ -78,14 +78,6 @@ export function Filters({ value, onChange }: { value: RankFilters; onChange: (f:
         <button type="button" className={value.gemsOnly ? "chip on" : "chip"} aria-pressed={Boolean(value.gemsOnly)} onClick={() => set({ gemsOnly: !value.gemsOnly })}>
           💎 Hidden gems
         </button>
-        <button
-          type="button"
-          className={value.curatedOnly ? "chip on" : "chip"}
-          aria-pressed={Boolean(value.curatedOnly)}
-          onClick={() => set({ curatedOnly: !value.curatedOnly })}
-        >
-          📌 Curator picks
-        </button>
         <button type="button" className="chip" onClick={() => onChange({ media: value.media })}>
           Reset
         </button>

@@ -268,9 +268,8 @@ input[type="search"] {
 
 .overview {
   font-size: 0.88rem;
-  margin: 6px 0;
+  margin: 6px 0 0;
   color: #cfcfdc;
-  cursor: pointer;
 }
 
 .overview.clamp {
@@ -485,4 +484,26 @@ form.stack,
   z-index: 11;
   border-radius: 999px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.card.expandable {
+  cursor: pointer;
+}
+
+.card.expandable:active {
+  background: #202030;
+}
+
+.card-poster {
+  align-self: start;
+}
+
+.more-toggle {
+  background: none;
+  border: 0;
+  padding: 2px 0 4px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { CuratorInput, isValidHandle } from "@/components/CuratorInput";
 import { Poster, TitleCard, TypeBadge } from "@/components/TitleCard";
@@ -55,14 +55,21 @@ interface PickGroup {
   followed: boolean;
 }
 
+const PAGE = 24;
+const EXCLUDED_KEY = "movie-recommender:picks-excluded";
+
 function PickSection({ heading, groups, empty }: { heading: string; groups: PickGroup[]; empty: string }) {
+  // Paginate: the real data has well over a thousand picks, and rendering them all at once is slow.
+  const [shown, setShown] = useState(PAGE);
   if (!groups.length && !empty) return null;
   return (
     <section>
-      <h2>{heading}</h2>
+      <h2>
+        {heading} <span className="muted small">({groups.length})</span>
+      </h2>
       {groups.length ? (
         <div className="list">
-          {groups.map((g) => {
+          {groups.slice(0, shown).map((g) => {
             // Followed curators first in the reason line.
             const handles = [...g.curators].sort((a, b) => Number(isFollowed(b)) - Number(isFollowed(a)));
             return <TitleCard key={g.title.key} title={g.title} reason={`Picked by ${handles.map((h) => `@${h}`).join(", ")}`} />;
@@ -71,21 +78,94 @@ function PickSection({ heading, groups, empty }: { heading: string; groups: Pick
       ) : (
         <p className="muted">{empty}</p>
       )}
+      {groups.length > shown ? (
+        <p style={{ textAlign: "center" }}>
+          <button type="button" className="btn secondary" onClick={() => setShown((n) => n + PAGE)}>
+            Show more
+          </button>
+        </p>
+      ) : null}
     </section>
   );
 }
 
+/** Multi-select curator chips. Stores the *deselected* handles, so everything (incl. new curators) is on by default. */
+function CuratorFilter({
+  counts,
+  excluded,
+  onChange,
+}: {
+  counts: Map<string, number>;
+  excluded: Set<string>;
+  onChange: (next: Set<string>) => void;
+}) {
+  const handles = [...counts.keys()].sort(
+    (a, b) => Number(isFollowed(b)) - Number(isFollowed(a)) || a.localeCompare(b),
+  );
+  const toggle = (h: string) => {
+    const next = new Set(excluded);
+    if (next.has(h)) next.delete(h);
+    else next.add(h);
+    onChange(next);
+  };
+  const selected = handles.filter((h) => !excluded.has(h)).length;
+  return (
+    <details className="filters" open>
+      <summary>
+        Curators <span className="muted small">({selected} of {handles.length} selected)</span>
+      </summary>
+      <div className="filter-row chips">
+        <button type="button" className="chip" onClick={() => onChange(new Set())} disabled={selected === handles.length}>
+          Select all
+        </button>
+        <button type="button" className="chip" onClick={() => onChange(new Set(handles))} disabled={selected === 0}>
+          Clear
+        </button>
+      </div>
+      <div className="filter-row chips">
+        {handles.map((h) => {
+          const on = !excluded.has(h);
+          return (
+            <button key={h} type="button" className={on ? "chip on" : "chip"} aria-pressed={on} onClick={() => toggle(h)}>
+              {isFollowed(h) ? "📌 " : ""}@{h} <span className="muted">{counts.get(h)}</span>
+            </button>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
 export default function PicksPage() {
   const { ready, getTitle, session } = useApp();
   const { picks } = useAllPicks();
   const mine = useStore(activePicks);
   const ownerId = useStore((s) => s.ownerId);
-  const [curatorFilter, setCuratorFilter] = useState("");
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    try {
+      setExcluded(new Set(JSON.parse(localStorage.getItem(EXCLUDED_KEY) ?? "[]") as string[]));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const updateExcluded = (next: Set<string>) => {
+    setExcluded(next);
+    localStorage.setItem(EXCLUDED_KEY, JSON.stringify([...next]));
+  };
+  const counts = useMemo(() => {
+    const perCurator = new Map<string, Set<string>>();
+    for (const p of picks) {
+      const s = perCurator.get(p.curator) ?? new Set<string>();
+      s.add(p.key);
+      perCurator.set(p.curator, s);
+    }
+    return new Map([...perCurator].map(([h, s]) => [h, s.size]));
+  }, [picks]);
 
   const grouped = useMemo(() => {
     const byKey = new Map<string, PickGroup>();
     for (const p of picks) {
-      if (curatorFilter && p.curator !== curatorFilter) continue;
+      if (excluded.has(p.curator)) continue;
       const t = getTitle(p.key);
       if (!t) continue;
       const g = byKey.get(p.key) ?? { title: t, curators: new Set<string>(), followed: false };
@@ -94,11 +174,12 @@ export default function PicksPage() {
       byKey.set(p.key, g);
     }
     return [...byKey.values()].sort((a, b) => b.curators.size - a.curators.size || b.title.votes - a.title.votes);
-  }, [picks, curatorFilter, getTitle]);
+  }, [picks, excluded, getTitle]);
 
   if (!ready) return <p className="muted">Loading…</p>;
-  const handles = [...new Set(picks.map((p) => p.curator))].sort();
   const myOwn = mine.filter((p) => p.pending || !p.addedBy || p.addedBy === (session?.user.id ?? ownerId));
+  // Remount sections when the selection changes so their "Show more" pagination resets.
+  const selectionKey = [...excluded].sort().join(",");
   return (
     <>
       <h1>Curator picks</h1>
@@ -108,19 +189,7 @@ export default function PicksPage() {
         {supabaseConfigured && !session ? " Sign in to share picks with your family." : ""}
       </p>
       <AddPickForm />
-      {handles.length ? (
-        <label className="row small">
-          Curator{" "}
-          <select value={curatorFilter} onChange={(e) => setCuratorFilter(e.target.value)}>
-            <option value="">All</option>
-            {handles.map((h) => (
-              <option key={h} value={h}>
-                @{h}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
+      {counts.size ? <CuratorFilter counts={counts} excluded={excluded} onChange={updateExcluded} /> : null}
       {myOwn.length ? (
         <>
           <h2>Added by you</h2>
@@ -154,8 +223,13 @@ export default function PicksPage() {
           </div>
         </>
       ) : null}
-      <PickSection heading="📌 Picks by followed curators" groups={grouped.filter((g) => g.followed)} empty="No picks from the curators you follow yet — share a post to the app or add one above." />
-      <PickSection heading="Picks by other curators" groups={grouped.filter((g) => !g.followed)} empty="" />
+      <PickSection
+        key={`followed-${selectionKey}`}
+        heading="📌 Picks by followed curators"
+        groups={grouped.filter((g) => g.followed)}
+        empty="No picks from the selected curators you follow — share a post to the app or add one above."
+      />
+      <PickSection key={`others-${selectionKey}`} heading="Picks by other curators" groups={grouped.filter((g) => !g.followed)} empty="" />
       {!grouped.length ? (
         <p className="muted small">
           Tip: see <Link href="/account/">Me</Link> for how to install the app so it appears in your phone&apos;s Share sheet.
