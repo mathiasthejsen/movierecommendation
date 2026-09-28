@@ -10,7 +10,14 @@ import { useAllPicks } from "@/components/usePicks";
 import { loadNeighbors } from "@/lib/artifact";
 import { ONBOARDING_TARGET } from "@/lib/config";
 import { isFollowed } from "@/lib/curators";
-import { indexPicks, preferenceWeight, rankRecommendations, tmdbFallbackEdges, type RankFilters } from "@/lib/ranking";
+import {
+  indexPicks,
+  preferenceWeight,
+  rankRecommendations,
+  tmdbFallbackEdges,
+  type RankFilters,
+  type Recommendation,
+} from "@/lib/ranking";
 import { activeRatings, activeWatchlist, useStore } from "@/lib/store";
 import { proxyRecommendations } from "@/lib/tmdbProxy";
 import type { Edge, Title, TitleKey } from "@/lib/types";
@@ -40,6 +47,12 @@ export default function FeedPage() {
   const [extraTitles, setExtraTitles] = useState<Map<TitleKey, Title>>(new Map());
   const [shown, setShown] = useState(PAGE);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // The visible list is "pinned": rating a card doesn't reshuffle the feed under your finger.
+  // It re-ranks only on filter changes, first data load, or when you tap "Update recommendations".
+  const [pinned, setPinned] = useState<{ list: Recommendation[]; sig: string } | null>(null);
+  const [generation, setGeneration] = useState(0);
+  const [neighborsLoaded, setNeighborsLoaded] = useState(false);
+  const [loadedSig, setLoadedSig] = useState("");
 
   useEffect(() => setFilters(loadFilters()), []);
   const updateFilters = (f: RankFilters) => {
@@ -53,6 +66,7 @@ export default function FeedPage() {
 
   useEffect(() => {
     if (!ready || !ratedKeys.length) return;
+    const sig = ratedSig;
     let cancelled = false;
     (async () => {
       try {
@@ -85,6 +99,8 @@ export default function FeedPage() {
           setNeighbors(map);
           setExtraTitles(extra);
           setLoadError(null);
+          setNeighborsLoaded(true);
+          setLoadedSig(sig);
         }
       } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
@@ -109,10 +125,26 @@ export default function FeedPage() {
     });
   }, [ready, extraTitles, snapshots, catalog, ratings, neighbors, meta, filters, picks, weights, hideWatchlist, watchlist]);
 
+  const initialLoaded = ready && (neighborsLoaded || ratedKeys.length === 0);
+  const pinTrigger = `${generation}|${JSON.stringify(filters)}|${hideWatchlist}|${initialLoaded}`;
+  useEffect(() => {
+    if (initialLoaded) setPinned({ list: recs, sig: ratedSig });
+    // Deliberately not depending on recs/ratedSig: re-pin only on explicit triggers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinTrigger]);
+  // Offer a re-rank once the new rating's neighbour data has loaded (no ratings left = nothing to load).
+  const stale = Boolean(pinned && pinned.sig !== ratedSig && (loadedSig === ratedSig || ratedKeys.length === 0));
+  const refresh = () => {
+    setGeneration((g) => g + 1);
+    setShown(PAGE);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const visible = pinned?.list ?? [];
+
   // Top recommendations picked by curators you follow get their own section.
-  const followedPicks = recs.filter((r) => r.curators.some(isFollowed)).slice(0, FOLLOWED_MAX);
+  const followedPicks = visible.filter((r) => r.curators.some(isFollowed)).slice(0, FOLLOWED_MAX);
   const followedKeys = new Set(followedPicks.map((r) => r.title.key));
-  const rest = recs.filter((r) => !followedKeys.has(r.title.key));
+  const rest = visible.filter((r) => !followedKeys.has(r.title.key));
 
   if (error) return <p className="error">Couldn&apos;t load the data artifact: {error}</p>;
   if (!ready) return <p className="muted">Loading…</p>;
@@ -151,13 +183,15 @@ export default function FeedPage() {
           <h2 id="followed-heading">📌 Picks by followed curators</h2>
           <div className="list">
             {followedPicks.map((r) => (
-              <TitleCard key={r.title.key} title={getTitle(r.title.key) ?? r.title} reason={r.reason} badges={r.gem ? ["💎 Gem"] : undefined} />
+              <TitleCard key={r.title.key} title={getTitle(r.title.key) ?? r.title} reason={r.reason} badges={r.gem ? ["💎 Gem"] : undefined} dimWhenRated />
             ))}
           </div>
         </section>
       ) : null}
       <h2>{followedPicks.length ? "More for you" : "Recommended"}</h2>
-      {rest.length === 0 ? (
+      {!pinned ? (
+        <p className="muted">Loading recommendations…</p>
+      ) : rest.length === 0 ? (
         <p className="muted">
           {ratings.length ? "No matches for these filters yet — try widening them or rating a few more titles." : "Nothing yet."}
         </p>
@@ -169,10 +203,16 @@ export default function FeedPage() {
               title={getTitle(r.title.key) ?? r.title}
               reason={r.reason}
               badges={r.gem ? ["💎 Gem"] : undefined}
+              dimWhenRated
             />
           ))}
         </div>
       )}
+      {stale ? (
+        <button type="button" className="btn refresh-bar" onClick={refresh}>
+          ↻ Update recommendations
+        </button>
+      ) : null}
       {rest.length > shown ? (
         <p style={{ textAlign: "center" }}>
           <button type="button" className="btn secondary" onClick={() => setShown((n) => n + PAGE)}>

@@ -463,3 +463,26 @@ form.stack,
   display: grid;
   gap: 10px;
 }
+
+.card {
+  transition: opacity 0.25s ease;
+}
+
+.card.rated {
+  opacity: 0.5;
+}
+
+.card.rated:focus-within,
+.card.rated:hover {
+  opacity: 0.85;
+}
+
+.refresh-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 11;
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}

@@ -76,11 +76,23 @@ export function Providers({ title }: { title: Title }) {
   return <p className="providers">Stream: {names.slice(0, 4).join(", ")}</p>;
 }
 
-export function TitleCard({ title, reason, badges }: { title: Title; reason?: string; badges?: string[] }) {
+export function TitleCard({
+  title,
+  reason,
+  badges,
+  dimWhenRated = false,
+}: {
+  title: Title;
+  reason?: string;
+  badges?: string[];
+  /** Feed: keep a card in place after rating it, but fade it so the list doesn't jump. */
+  dimWhenRated?: boolean;
+}) {
   const [open, setOpen] = useState(false);
+  const rated = useStore((s) => Boolean(s.ratings[title.key] && !s.ratings[title.key].deleted));
   const inWatchlist = useStore((s) => Boolean(s.watchlist[title.key] && !s.watchlist[title.key].deleted));
   return (
-    <article className="card">
+    <article className={dimWhenRated && rated ? "card rated" : "card"}>
       <button type="button" className="card-poster" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <Poster title={title} />
       </button>
