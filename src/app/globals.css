@@ -507,3 +507,10 @@ form.stack,
   font-weight: 600;
   cursor: pointer;
 }
+
+a.chip {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--text);
+}

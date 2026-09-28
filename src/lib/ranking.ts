@@ -60,12 +60,19 @@ export function preferenceWeight(kind: RatingKind, value: number): number {
   return table[Math.round(value)] ?? 0;
 }
 
+/** TMDB series collect roughly 5-6x fewer votes than films of similar reach. */
+const TV_VOTE_SCALE = 6;
+
 /** 0..1: high rating and few votes = hidden gem. Very recent titles don't count (few votes just means new). */
-export function gemScore(t: Pick<Title, "rating" | "votes"> & { year?: number }, now = new Date()): number {
+export function gemScore(
+  t: Pick<Title, "rating" | "votes"> & { year?: number; type?: Title["type"] },
+  now = new Date(),
+): number {
   if (t.votes < 50) return 0; // too few votes to trust the rating
   if (t.year && t.year >= now.getFullYear() - 1) return 0;
+  const votes = t.type === "tv" ? t.votes * TV_VOTE_SCALE : t.votes;
   const quality = clamp((t.rating - 6.8) / 1.5, 0, 1);
-  const obscurity = 1 - clamp((Math.log10(t.votes + 1) - 2.5) / 1.8, 0, 1);
+  const obscurity = 1 - clamp((Math.log10(votes + 1) - 2.5) / 1.8, 0, 1);
   return quality * obscurity;
 }
 

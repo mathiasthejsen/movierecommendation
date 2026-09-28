@@ -50,6 +50,15 @@ describe("gemScore", () => {
     expect(gemScore({ rating: 8.1, votes: 700, year: 2025 }, now)).toBe(0);
     expect(gemScore({ rating: 8.1, votes: 700, year: 2019 }, now)).toBeGreaterThan(0.5);
   });
+
+  it("scales TV vote counts so well-known shows aren't gems", () => {
+    const now = new Date("2026-09-28");
+    // Narcos-like: 2,000 TMDB votes is a lot for a series.
+    expect(gemScore({ rating: 8.0, votes: 2000, year: 2015, type: "tv" }, now)).toBeLessThan(0.3);
+    expect(gemScore({ rating: 8.0, votes: 2000, year: 2015, type: "movie" }, now)).toBeGreaterThanOrEqual(0.3);
+    // A small, well-rated series still qualifies.
+    expect(gemScore({ rating: 8.1, votes: 150, year: 2018, type: "tv" }, now)).toBeGreaterThanOrEqual(0.3);
+  });
 });
 
 describe("rankRecommendations", () => {

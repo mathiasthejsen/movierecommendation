@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
 import { posterUrl } from "@/lib/config";
 import { tmdbUrl } from "@/lib/keys";
@@ -148,6 +149,9 @@ export function TitleCard({
           >
             {inWatchlist ? "✓ Watchlist" : "+ Watchlist"}
           </button>
+          <Link className="chip like-this" href={`/similar/?key=${encodeURIComponent(title.key)}`}>
+            More like this
+          </Link>
           <a className="link" href={tmdbUrl(title.key)} target="_blank" rel="noreferrer">
             TMDB ↗
           </a>
