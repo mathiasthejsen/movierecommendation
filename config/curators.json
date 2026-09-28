@@ -100,6 +100,18 @@
       "note": "No matching Letterboxd feed ('nikofilmreviews' is 404; user 'niko' is not confirmed as the same person). Fill in if found. Share-target and manual picks only."
     },
     {
+      "handle": "jacobstolworthy",
+      "name": "Jacob Stolworthy",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "screenworthy",
+      "own": true,
+      "weight": 1.0,
+      "enabled": true,
+      "verify": false,
+      "note": "Chief Film & TV Correspondent at The Independent. Letterboxd username is 'screenworthy' (feed name 'Jacob Stolworthy'; verified 2026-09-28)."
+    },
+    {
       "handle": "maddikoch",
       "name": "Maddi Lou",
       "instagram": "",
@@ -206,6 +218,177 @@
       "enabled": true,
       "verify": false,
       "note": "Feed is mostly lists; list entries count as picks with a lower weight."
+    },
+    {
+      "handle": "davidlsims",
+      "name": "David Sims",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "davidlsims",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": "Critic at The Atlantic; co-host of the Blank Check podcast."
+    },
+    {
+      "handle": "zoerosebryant",
+      "name": "zoë rose bryant",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "zoerosebryant",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": "Popular Letterboxd reviewer."
+    },
+    {
+      "handle": "silentdawn",
+      "name": "SilentDawn",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "silentdawn",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": "Popular Letterboxd reviewer."
+    },
+    {
+      "handle": "suspirliam",
+      "name": "suspirliam",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "suspirliam",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": "Popular Letterboxd reviewer."
+    },
+    {
+      "handle": "framesofnick",
+      "name": "Framesofnick",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "framesofnick",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": "YouTuber and reviewer."
+    },
+    {
+      "handle": "jay",
+      "name": "Jay",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "jay",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": "Popular Letterboxd reviewer."
+    },
+    {
+      "handle": "demiadejuyigbe",
+      "name": "Demi Adejuyigbe",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "demiadejuyigbe",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": "Comedian and writer; popular Letterboxd reviewer."
+    },
+    {
+      "handle": "aaronkelly",
+      "name": "Aaron Kelly",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "aaron",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": "Popular Letterboxd reviewer (Letterboxd username aaron)."
+    },
+    {
+      "handle": "jimmycthatsme",
+      "name": "Jim Cummings",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "jimmycthatsme",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": "Filmmaker (Thunder Road, The Wolf of Snow Hollow)."
+    },
+    {
+      "handle": "girlactress",
+      "name": "Rachel Sennott",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "girlactress",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": [
+        "Actor. Feed shows only the username; identity per public reporting.",
+        "",
+        "",
+        true
+      ]
+    },
+    {
+      "handle": "itscharlibb",
+      "name": "Charli XCX",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "itscharlibb",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": [
+        "Musician. Feed shows only the username; identity per public reporting.",
+        "",
+        "",
+        true
+      ]
+    },
+    {
+      "handle": "kodak_cameron",
+      "name": "Cameron Kozak",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "kodak_cameron",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": [
+        "FilmTok creator. TikTok handle assumed to match; not confirmed.",
+        "",
+        "kodak_cameron",
+        true
+      ]
+    },
+    {
+      "handle": "specificliz",
+      "name": "specific liz",
+      "instagram": "",
+      "tiktok": "",
+      "letterboxd": "specificliz",
+      "own": false,
+      "weight": 0.6,
+      "enabled": true,
+      "verify": false,
+      "note": "Popular Letterboxd reviewer."
     }
   ]
 }
