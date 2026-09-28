@@ -54,12 +54,15 @@ function Login() {
       </form>
       {sent ? (
         <form className="stack" onSubmit={verify}>
-          <p className="small">Check your email and tap the link. On an installed iPhone app, you can type the 6-digit code instead:</p>
+          <p className="small">
+            Check your email and tap the link. If the email also shows a login code (it does once custom email is set up),
+            you can type it here instead, which is handy in the installed iPhone app:
+          </p>
           <input
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
-            placeholder="123456"
+            placeholder="12345678"
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />

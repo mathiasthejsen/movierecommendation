@@ -1,5 +1,19 @@
-# Minimal Supabase CLI config for deploying the Edge Function.
-# `supabase init` would generate a fuller file; only the function settings matter here.
+# Supabase CLI config. Only the settings declared here are pushed with
+# `supabase config push` (preview first with `supabase config diff`).
+
+[auth]
+# Family-only: nobody can sign up; invite people from the dashboard (Auth > Users > Invite).
+enable_signup = false
+site_url = "https://mathiasthejsen.github.io/movierecommendation/"
+additional_redirect_urls = [
+  "https://mathiasthejsen.github.io/movierecommendation/**",
+  "http://localhost:3000/**",
+  "http://localhost:4173/**",
+]
+
+# A custom magic-link template (with the login code for installed iPhone apps) needs a
+# custom SMTP provider: the free plan's built-in email service doesn't allow template edits.
+# See README "Supabase setup" -> email.
 
 [functions.tmdb-proxy]
 # The function verifies the caller's user JWT itself (supabase.auth.getUser), which works

@@ -19,8 +19,24 @@ const TMDB = "https://api.themoviedb.org/3";
 const TMDB_API_KEY = Deno.env.get("TMDB_API_KEY") ?? "";
 const TMDB_READ_TOKEN = Deno.env.get("TMDB_READ_TOKEN") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+/** New projects expose API keys as JSON maps (SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS); older ones use the legacy vars. */
+function injectedKey(jsonVar: string, legacyVar: string): string {
+  const raw = Deno.env.get(jsonVar);
+  if (raw) {
+    try {
+      const keys = JSON.parse(raw) as Record<string, string>;
+      const key = keys["default"] ?? Object.values(keys)[0];
+      if (key) return key;
+    } catch {
+      /* fall back to the legacy variable */
+    }
+  }
+  return Deno.env.get(legacyVar) ?? "";
+}
+
+const SUPABASE_PUBLIC_KEY = injectedKey("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY");
+const SUPABASE_ADMIN_KEY = injectedKey("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY");
 const REGION = (Deno.env.get("WATCH_REGION") ?? "US").toUpperCase();
 const RATE_LIMIT = Number(Deno.env.get("PROXY_RATE_LIMIT") ?? "120");
 const WINDOW_SECONDS = 3600;
@@ -32,7 +48,7 @@ const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
 
 const TV_GENRE_MAP: Record<number, number[]> = { 10759: [28, 12], 10765: [878, 14], 10768: [10752, 36] };
 
-const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+const admin = createClient(SUPABASE_URL, SUPABASE_ADMIN_KEY, { auth: { persistSession: false } });
 
 function corsHeaders(origin: string | null): Record<string, string> {
   const h: Record<string, string> = {
@@ -112,7 +128,7 @@ Deno.serve(async (req) => {
   // 1. Require a real signed-in user (not just the public anon key).
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!token) return json({ error: "sign in required" }, 401, origin);
-  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+  const userClient = createClient(SUPABASE_URL, SUPABASE_PUBLIC_KEY, { auth: { persistSession: false } });
   const { data: userData, error: userError } = await userClient.auth.getUser(token);
   if (userError || !userData?.user) return json({ error: "invalid session" }, 401, origin);
 

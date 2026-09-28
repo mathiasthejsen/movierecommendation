@@ -264,6 +264,7 @@ def write_artifact(
             "justwatch": "Streaming availability data provided by JustWatch via TMDB.",
             "movielens": "Film similarity derived from the MovieLens ml-32m dataset (GroupLens, University of Minnesota). Non-commercial use only.",
             "reddit": "Recommendation edges derived from public Reddit threads via the official API. No Reddit text is stored.",
+            "trakt": "Related-show data from Trakt (trakt.tv).",
             "letterboxd": "Curator picks from public Letterboxd RSS feeds (IDs, ratings and links only).",
         },
     }

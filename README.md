@@ -126,7 +126,7 @@ Only derived edges and scores are stored. **No comment text, post bodies or user
 Create a free project at <https://supabase.com/dashboard>. Then open **Project Settings → API** and copy the **Project URL** and the **anon / publishable** key. That key is designed to be public, and row-level security protects the data. **Never** use the `service_role` or `sb_secret_…` key in the site; the build refuses to run if one ends up in a `NEXT_PUBLIC_` variable.
 
 ### Trakt (optional)
-Create an app at <https://trakt.tv/oauth/applications> and set `TRAKT_CLIENT_ID` as a GitHub secret. This adds "related shows" edges.
+Create an app at <https://trakt.tv/oauth/applications>. The pipeline only reads public data, so use the out-of-band redirect URI `urn:ietf:wg:oauth:2.0:oob` and leave *Allowed origins* empty. Copy the **Client ID** (not the secret) into the GitHub secret `TRAKT_CLIENT_ID`. This adds "related shows" edges for series, and the footer credits Trakt once its data is used.
 
 ### Instagram Graph API Business Discovery (optional, disabled by default)
 This step reads recent captions from the curators' **public Business or Creator** Instagram accounts through Meta's official API. **It only works if the target accounts are Business or Creator accounts.** Personal accounts can't be read, and the API returns an error for them, which the pipeline logs and skips. Setup:
@@ -139,29 +139,37 @@ The step processes captions in memory and stores **only the TMDB ids and post pe
 
 ## Supabase setup
 
-1. **Schema and RLS:** open the SQL editor, paste [`supabase/schema.sql`](supabase/schema.sql) and run it. Then run [`supabase/checks.sql`](supabase/checks.sql); every check should come back empty or `true`. Keep **row-level security on for every table**. The schema enables it for `ratings`, `watchlist`, `curator_picks` and `tmdb_proxy_usage`, and gives no access to the `anon` role.
+Supabase's **Free** plan is enough for this app (500 MB database, 50,000 monthly active users, unlimited API requests). Free projects **pause after a week without activity**; the `Supabase keep-alive` workflow pings the project twice a week to prevent that. If it ever does pause, restore it from the dashboard.
+
+Everything below can be done from the project folder with the [Supabase CLI](https://supabase.com/docs/guides/cli) (`npx supabase@2 …` works without installing it):
+
+1. **Sign in and link:** `supabase login`, then `supabase link --project-ref <your-project-ref>`. The project ref is the `xxxx` in `https://xxxx.supabase.co`, and `supabase projects list` shows it.
+2. **Schema and RLS:** `supabase db query --linked -f supabase/schema.sql` (or paste the file into the SQL editor). Then run the queries in [`supabase/checks.sql`](supabase/checks.sql); every check should come back empty or `true`. Keep **row-level security on for every table**. The schema enables it for `ratings`, `watchlist`, `curator_picks` and `tmdb_proxy_usage`, and gives no access to the `anon` role.
    - `ratings` and `watchlist`: `auth.uid() = user_id`, so each person sees only their own rows.
    - `curator_picks`: every signed-in family member can read; only the person who added a pick can insert, update or delete it. No captions or media are stored.
-2. **Auth → Providers → Email:** keep Email enabled and **turn "Allow new users to sign up" OFF**. This family-only setup has no allow-list: people who weren't invited simply can't get a session, and the app shows *"This app is private — ask the owner for an invite."*
-3. **Auth → URL Configuration:** set **Site URL** to your Pages URL (`https://<user>.github.io/movie-recommender/`). Add the same URL, plus `http://localhost:3000/**` for development, to **Redirect URLs**.
-4. **Auth → Email Templates → Magic Link** (recommended for iPhone): add `Your code: {{ .Token }}` to the template. An installed iOS web app can't receive the link directly, so the user can type the 6-digit code into the app instead.
-5. **Sessions:** the app keeps people signed in (`persistSession` plus automatic token refresh), so they rarely need to log in again.
-6. **Edge Function (TMDB proxy):** install the [Supabase CLI](https://supabase.com/docs/guides/cli), then run:
+3. **Login settings:** edit the URLs in [`supabase/config.toml`](supabase/config.toml) for your Pages site, run `supabase config diff` to preview, then `supabase config push`. The file turns **sign-ups off** and sets the **Site URL** and **Redirect URLs**, and it changes nothing else. This family-only setup has no allow-list: people who weren't invited can't get a session, and the app shows *"This app is private — ask the owner for an invite."*
+4. **Edge Function (TMDB proxy):**
    ```bash
-   supabase login
-   supabase link --project-ref <your-project-ref>
    supabase secrets set TMDB_API_KEY=<your tmdb key> \
      ALLOWED_ORIGINS=https://<user>.github.io,http://localhost:3000 \
      PROXY_RATE_LIMIT=120 WATCH_REGION=US
-   supabase functions deploy tmdb-proxy --no-verify-jwt
+   supabase functions deploy tmdb-proxy --no-verify-jwt --use-api
    ```
-   The function checks the caller's **user JWT** itself with `auth.getUser`, so the public anon key alone is rejected. It applies a **per-user rate limit** (120 requests per hour by default, stored in `tmdb_proxy_usage`) and allows CORS only from `ALLOWED_ORIGINS`. The origin is just the scheme and host, with no path. If the function isn't deployed, the app falls back to searching the offline catalogue.
+   The function checks the caller's **user JWT** itself with `auth.getUser`, so the public key alone is rejected. It applies a **per-user rate limit** (120 requests per hour by default, stored in `tmdb_proxy_usage`) and allows CORS only from `ALLOWED_ORIGINS`. The origin is just the scheme and host, with no path. It works with both the new `sb_publishable_…`/`sb_secret_…` keys and the legacy anon/service-role keys. If the function isn't deployed, the app falls back to searching the offline catalogue.
+5. **Sessions:** the app keeps people signed in (`persistSession` plus automatic token refresh), so they rarely need to log in again.
+
+### Login emails on the free plan
+
+Supabase's built-in email service is meant for testing: it **only sends to members of your Supabase organization's team**, at about **2 emails per hour**, and it **doesn't allow editing email templates**. That's fine for you as the owner. For anyone else, pick one:
+
+- **Simplest:** add them to your organization under **Organization settings → Team → Invite**, so the built-in email service will send to them. Then add them as an app user (see below).
+- **Better:** connect a free email provider under **Auth → SMTP settings** (for example [Brevo](https://www.brevo.com/), [Resend](https://resend.com/) or [ZeptoMail](https://www.zoho.com/zeptomail/)). This lifts both limits and unlocks **Auth → Email Templates**. There, add `Your code: {{ .Token }}` to the **Magic Link** template: an app installed to the iPhone Home Screen can't catch the login link, but you can type the code into **Me** instead.
 
 ## Add a family member
 
-1. Open Supabase and go to **Authentication → Users → Invite user**. Enter their email address.
-2. They click the link in the invite email, and that's it. From then on they can use **Me → Send login link** on any device and stay signed in.
-
+1. Make sure Supabase can email them (see *Login emails on the free plan* above).
+2. In Supabase, go to **Authentication → Users → Add user → Send invitation** and enter their email address. Or choose **Create new user** with *Auto Confirm User* ticked; that sends no email.
+3. They open the app and use **Me → Send login link**, or click the invite link. That's it: they stay signed in on that device.
 ## Deploy to GitHub Pages on your personal account
 
 Nothing has been pushed anywhere. This repository only has **local commits**. Follow these steps on **your personal GitHub account**:

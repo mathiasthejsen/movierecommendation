@@ -35,6 +35,15 @@ export function Attribution() {
         (GroupLens, University of Minnesota; non-commercial use). Recommendation links mined from public Reddit threads
         via the official API. Curator picks from public Letterboxd RSS feeds and your own shares.
       </p>
+      {meta?.counts.traktEdges ? (
+        <p>
+          Related-show data from{" "}
+          <a href="https://trakt.tv/" target="_blank" rel="noreferrer">
+            <strong>Trakt</strong>
+          </a>
+          .
+        </p>
+      ) : null}
       {meta ? (
         <p className="muted">
           Data {meta.sample ? "(sample) " : ""}updated {new Date(meta.generatedAt).toLocaleDateString()} · region {meta.region}
