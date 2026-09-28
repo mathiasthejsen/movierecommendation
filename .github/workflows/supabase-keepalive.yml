@@ -1,0 +1,35 @@
+# Keeps the free Supabase project from pausing (free projects pause after 1 week of inactivity).
+# Calls the harmless public.keepalive() SQL function with the public anon key twice a week.
+# Needs the repository variables SUPABASE_URL and SUPABASE_ANON_KEY; skips cleanly without them.
+
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: "23 6 * * 1,4" # Mondays and Thursdays 06:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping Supabase
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::notice::SUPABASE_URL / SUPABASE_ANON_KEY variables not set; nothing to keep alive."
+            exit 0
+          fi
+          code=$(curl -s -o /tmp/out -w '%{http_code}' -X POST "${SUPABASE_URL%/}/rest/v1/rpc/keepalive" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Content-Type: application/json" -d '{}')
+          echo "HTTP $code: $(cat /tmp/out)"
+          if [ "$code" != "200" ]; then
+            echo "::warning::Keep-alive failed. If the project is paused, restore it in the Supabase dashboard."
+            exit 1
+          fi

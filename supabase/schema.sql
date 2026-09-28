@@ -135,3 +135,15 @@ $$;
 
 revoke all on function public.tmdb_proxy_consume(uuid, integer, integer) from public, anon, authenticated;
 grant execute on function public.tmdb_proxy_consume(uuid, integer, integer) to service_role;
+
+-- ---------------------------------------------------------------------------------
+-- Keep-alive: free Supabase projects pause after a week without activity. The GitHub
+-- workflow calls this twice a week with the public anon key. It reads no data.
+create or replace function public.keepalive()
+returns timestamptz
+language sql
+stable
+as $$ select now() $$;
+
+revoke all on function public.keepalive() from public;
+grant execute on function public.keepalive() to anon, authenticated;
