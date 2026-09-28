@@ -94,7 +94,10 @@ score   = base · (1 + 0.3·gem)                           gem = high TMDB ratin
 ```
 
 - Ratings are thumbs up/down or 1–5 stars. 3 stars counts as neutral, and 1–2 stars count as dislikes.
-- Results are filtered to 1980 or later and exclude anything you've already rated. Filters cover **Movies / TV / Both**, genre, year range, streaming provider (TMDB watch providers, JustWatch data), hidden gems only, and **curator picks only**. You can also hide titles on your watchlist.
+- Results are filtered to 1980 or later and exclude anything you've already rated. Filters cover **Movies / TV / Both**, genre, year range, streaming provider (TMDB watch providers, JustWatch data) and hidden gems only. You can also hide titles on your watchlist.
+- **For you** has two tabs. **Based on my ratings** ranks only by similarity to what you rated; curators have no effect on it. **From curators** shows only curator picks, ordered by how well they fit your ratings, split into "Picks by followed curators" (`own: true`) and "Picks by other curators".
+- Rating a card on the feed doesn't reshuffle the list: the card stays in place, dimmed, and an **Update recommendations** button re-ranks when you're ready.
+- The **Picks** page lists every pick, with a curator multiselect (all selected by default; your selection is remembered).
 - If you rate something the artifact doesn't cover (found through live search), the app asks the Edge Function for TMDB recommendations and similar titles as a fallback.
 
 **Title extraction** runs in [`pipeline/extract.py`](pipeline/extract.py), with a TypeScript port in [`src/lib/extract.ts`](src/lib/extract.ts) for the Share Target. It finds candidates in bold and italic text, list items (including inline `1. X 2. Y` lists), `Title (Year)` mentions, `(TV series)` and `(2008–2013)` markers for series, and "Movies/Shows like X" seed phrases. It strips hashtags, @mentions and emoji. Every candidate is then **validated against TMDB search** (`/search/movie`, `/search/tv`, `/search/multi`). An optional LLM hook is available: set `LLM_EXTRACTOR=package.module:function`, and the function receives text and returns titles.
