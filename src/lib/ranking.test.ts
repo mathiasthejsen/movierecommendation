@@ -43,6 +43,13 @@ describe("gemScore", () => {
     expect(gemScore({ rating: 6.0, votes: 300 })).toBe(0);
     expect(gemScore({ rating: 9.5, votes: 10 })).toBe(0);
   });
+
+  it("doesn't call brand-new releases gems", () => {
+    const now = new Date("2026-09-28");
+    expect(gemScore({ rating: 8.1, votes: 700, year: 2026 }, now)).toBe(0);
+    expect(gemScore({ rating: 8.1, votes: 700, year: 2025 }, now)).toBe(0);
+    expect(gemScore({ rating: 8.1, votes: 700, year: 2019 }, now)).toBeGreaterThan(0.5);
+  });
 });
 
 describe("rankRecommendations", () => {
@@ -197,8 +204,15 @@ describe("curator picks", () => {
     expect(s.handles).toEqual(["goosebumpscinema", "davidehrlich"]);
   });
 
-  it("supports a curator-picks-only filter", () => {
-    const picks = indexPicks([pick("movie:11", "davidehrlich"), pick("tv:5", "goosebumpscinema")]);
+  it("keeps heavily-picked but unconnected titles below modest taste matches", () => {
+    const many = ["a", "b", "c", "d", "e"].map((h) => pick("tv:5", h));
+    const w = new Map(["a", "b", "c", "d", "e"].map((h) => [h, 1]));
+    const nb = new Map<TitleKey, Edge[]>([[LIKED, [["movie:10", 25, 0, 0, 0]]]]);
+    const recs = rankRecommendations(new Map([[LIKED, 1]]), nb, catalog, { picks: indexPicks(many), curatorWeights: w });
+    expect(recs.map((r) => r.title.key)).toEqual(["movie:10", "tv:5"]);
+  });
+
+  it("supports a curator-picks-only filter", () => {    const picks = indexPicks([pick("movie:11", "davidehrlich"), pick("tv:5", "goosebumpscinema")]);
     const recs = rankRecommendations(new Map([[LIKED, 1]]), neighbors, catalog, {
       picks, curatorWeights: weights, filters: { curatedOnly: true },
     });

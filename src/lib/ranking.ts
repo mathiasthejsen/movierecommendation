@@ -31,7 +31,7 @@ export interface RankOptions {
   /** Curator picks: (key -> picks) and curator handle -> weight (disabled curators omitted). */
   picks?: Map<TitleKey, CuratorPick[]>;
   curatorWeights?: Map<string, number>;
-  /** Additive score for a curated title, and multiplier on connected ones. */
+  /** Curator multiplier on connected titles (default 0.4); unconnected curated titles get 0.3× that as a flat bonus. */
   curatorBoost?: number;
   filters?: RankFilters;
   exclude?: Iterable<TitleKey>;
@@ -60,9 +60,10 @@ export function preferenceWeight(kind: RatingKind, value: number): number {
   return table[Math.round(value)] ?? 0;
 }
 
-/** 0..1: high rating and few votes = hidden gem. */
-export function gemScore(t: Pick<Title, "rating" | "votes">): number {
+/** 0..1: high rating and few votes = hidden gem. Very recent titles don't count (few votes just means new). */
+export function gemScore(t: Pick<Title, "rating" | "votes"> & { year?: number }, now = new Date()): number {
   if (t.votes < 50) return 0; // too few votes to trust the rating
+  if (t.year && t.year >= now.getFullYear() - 1) return 0;
   const quality = clamp((t.rating - 6.8) / 1.5, 0, 1);
   const obscurity = 1 - clamp((Math.log10(t.votes + 1) - 2.5) / 1.8, 0, 1);
   return quality * obscurity;
@@ -144,7 +145,7 @@ const emptyAcc = (): Accumulator => ({
  *
  *   sim(c)  = Σ_liked w·s(l→c) − penalty · Σ_disliked |w|·s(d→c)
  *   s       = Σ_source weight·score / 100, ×(1 + agreementBonus) when ≥2 sources agree
- *   base(c) = sim⁺·(1 + 0.3·boost·cur) + boost·cur − penalty·dislikes,  cur = curator score (≤ 1.5)
+ *   base(c) = sim⁺·(1 + boost·cur) + 0.3·boost·cur − penalty·dislikes,  cur = curator score (≤ 1.5), boost = 0.4
  *   score   = base · (1 + gemBoost · gemScore)
  *
  * Curator picks are a fourth source: they lift connected titles and let
@@ -162,7 +163,7 @@ export function rankRecommendations(
   const penalty = options.dislikePenalty ?? 0.8;
   const gemBoost = options.gemBoost ?? 0.3;
   const agreement = options.agreementBonus ?? 0.15;
-  const curatorBoost = options.curatorBoost ?? 0.5;
+  const curatorBoost = options.curatorBoost ?? 0.4;
   const exclude = new Set(options.exclude ?? []);
   const acc = new Map<TitleKey, Accumulator>();
 
@@ -201,7 +202,7 @@ export function rankRecommendations(
     if (!title || title.year < minYear) continue;
     const cur = curatorScore(options.picks?.get(key), options.curatorWeights);
     if (!passesFilters(title, options.filters, cur.score > 0)) continue;
-    const base = a.pos * (1 + 0.3 * curatorBoost * cur.score) + curatorBoost * cur.score - penalty * a.neg;
+    const base = a.pos * (1 + curatorBoost * cur.score) + 0.3 * curatorBoost * cur.score - penalty * a.neg;
     if (base <= 0) continue;
     const gem = gemScore(title);
     const score = base * (1 + gemBoost * gem);

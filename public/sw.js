@@ -2,7 +2,7 @@
  * Scope and cache paths derive from the registration scope, so it works under any base path
  * (e.g. https://<user>.github.io/movie-recommender/).
  */
-const VERSION = "v3";
+const VERSION = "v4";
 const SCOPE = new URL(self.registration.scope);
 const BASE = SCOPE.pathname; // ends with "/"
 const SHELL = `shell-${VERSION}`;
@@ -38,14 +38,17 @@ async function trim(cacheName, max) {
   for (let i = 0; i < keys.length - max; i++) await cache.delete(keys[i]);
 }
 
-async function networkFirst(request, cacheName) {
+async function networkFirst(request, cacheName, fallbackToShell = true) {
   const cache = await caches.open(cacheName);
   try {
     const res = await fetch(request);
     if (res.ok) cache.put(request, res.clone());
     return res;
   } catch {
-    return (await cache.match(request)) || (await caches.match(BASE)) || Response.error();
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    if (fallbackToShell) return (await caches.match(BASE)) || Response.error();
+    return new Response(JSON.stringify({ error: "offline" }), { status: 503, headers: { "Content-Type": "application/json" } });
   }
 }
 
@@ -91,7 +94,9 @@ self.addEventListener("fetch", (event) => {
   } else if (url.pathname.startsWith(`${BASE}_next/static/`)) {
     event.respondWith(cacheFirst(request, STATIC));
   } else if (url.pathname.startsWith(`${BASE}data/`)) {
-    event.respondWith(staleWhileRevalidate(request, DATA));
+    // Network-first so meta, catalog and neighbour shards always come from the same weekly build;
+    // the cache is only used offline.
+    event.respondWith(networkFirst(request, DATA, false));
   } else {
     event.respondWith(staleWhileRevalidate(request, SHELL));
   }

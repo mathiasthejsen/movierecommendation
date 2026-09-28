@@ -89,7 +89,7 @@ On Windows PowerShell, set the variable with `$env:NEXT_PUBLIC_BASE_PATH='/movie
 ```
 s(l→c)  = Σ_source weight·score/100   (×1.15 when ≥ 2 sources agree)
 sim(c)  = Σ_liked w·s(l→c)  −  0.8 · Σ_disliked |w|·s(d→c)
-base(c) = sim⁺·(1 + 0.15·cur) + 0.5·cur − dislikes      cur = curator score (own curators 1.0, discovered 0.6, capped at 1.5)
+base(c) = sim⁺·(1 + 0.4·cur) + 0.12·cur − dislikes      cur = curator score (own curators 1.0, discovered 0.6, capped at 1.5)
 score   = base · (1 + 0.3·gem)                           gem = high TMDB rating × low vote count
 ```
 

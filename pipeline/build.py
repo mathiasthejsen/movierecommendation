@@ -14,6 +14,7 @@ import argparse
 import logging
 import sys
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 from . import curators as cur
@@ -24,6 +25,7 @@ from .movielens import build_neighbors
 from .reddit import RedditClient, mine_edges
 
 log = logging.getLogger("pipeline")
+MAX_EXTRA_TITLES = 4000
 
 
 def run_sample(cfg: Config) -> int:
@@ -148,9 +150,17 @@ def run_full(cfg: Config) -> int:
         if not (cfg.ig_user_id and cfg.ig_access_token):
             log.info("IG_USER_ID/IG_ACCESS_TOKEN not set; skipping Instagram Business Discovery.")
     picks = cur.merge_history(prev_picks, new_picks)
-    extra |= {p.key for p in picks}
 
-    extra = set(sorted(extra - catalog)[:4000])  # bound catalogue growth from edge targets
+    # Bound catalogue growth from edge targets: keep curator picks, then the titles
+    # referenced by the most edges (not key order, which would favour "movie:" over "tv:").
+    refs: Counter[str] = Counter()
+    for edges in (tmdb_edges, trakt_edges, reddit_edges):
+        for src, dst in edges:
+            refs[dst] += 1
+            refs[src] += 1
+    pick_keys = {p.key for p in picks} - catalog
+    ranked = sorted((k for k in extra | set(refs) if k not in catalog and k not in pick_keys), key=lambda k: -refs[k])
+    extra = pick_keys | set(ranked[: max(0, MAX_EXTRA_TITLES - len(pick_keys))])
     catalog |= extra
 
     # 6. Metadata for every title (poster, overview, genres, runtime, seasons, providers).
