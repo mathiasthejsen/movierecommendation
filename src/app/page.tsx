@@ -1,0 +1,160 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useApp } from "@/components/AppProvider";
+import { SampleBanner } from "@/components/Chrome";
+import { Filters } from "@/components/Filters";
+import { TitleCard } from "@/components/TitleCard";
+import { useAllPicks } from "@/components/usePicks";
+import { loadNeighbors } from "@/lib/artifact";
+import { ONBOARDING_TARGET } from "@/lib/config";
+import { indexPicks, preferenceWeight, rankRecommendations, tmdbFallbackEdges, type RankFilters } from "@/lib/ranking";
+import { activeRatings, activeWatchlist, useStore } from "@/lib/store";
+import { proxyRecommendations } from "@/lib/tmdbProxy";
+import type { Edge, Title, TitleKey } from "@/lib/types";
+
+const PAGE = 24;
+const FILTER_KEY = "movie-recommender:filters";
+const fallbackCache = new Map<TitleKey, { edges: Edge[]; titles: Title[] } | null>();
+
+function loadFilters(): RankFilters {
+  try {
+    return JSON.parse(localStorage.getItem(FILTER_KEY) ?? "{}") as RankFilters;
+  } catch {
+    return {};
+  }
+}
+
+export default function FeedPage() {
+  const { ready, error, catalog, meta, getTitle, session } = useApp();
+  const ratings = useStore(activeRatings);
+  const watchlist = useStore(activeWatchlist);
+  const snapshots = useStore((s) => s.titles);
+  const { picks, weights } = useAllPicks();
+  const [filters, setFilters] = useState<RankFilters>({});
+  const [hideWatchlist, setHideWatchlist] = useState(false);
+  const [neighbors, setNeighbors] = useState<Map<TitleKey, Edge[]>>(new Map());
+  const [extraTitles, setExtraTitles] = useState<Map<TitleKey, Title>>(new Map());
+  const [shown, setShown] = useState(PAGE);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => setFilters(loadFilters()), []);
+  const updateFilters = (f: RankFilters) => {
+    setFilters(f);
+    setShown(PAGE);
+    localStorage.setItem(FILTER_KEY, JSON.stringify(f));
+  };
+
+  const ratedKeys = useMemo(() => ratings.map((r) => r.key).sort(), [ratings]);
+  const ratedSig = ratedKeys.join(",");
+
+  useEffect(() => {
+    if (!ready || !ratedKeys.length) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const map = await loadNeighbors(ratedKeys);
+        // TMDB fallback (via the Edge Function) for rated titles the artifact doesn't cover.
+        const missing = ratedKeys.filter((k) => !map.has(k)).slice(0, 15);
+        const extra = new Map<TitleKey, Title>();
+        await Promise.all(
+          missing.map(async (key) => {
+            if (!fallbackCache.has(key)) {
+              const res = await proxyRecommendations(key);
+              fallbackCache.set(
+                key,
+                res.status === "ok" && res.data
+                  ? {
+                      edges: tmdbFallbackEdges(res.data.recommendations.map((t) => t.key), res.data.similar.map((t) => t.key)),
+                      titles: [...res.data.recommendations, ...res.data.similar],
+                    }
+                  : null,
+              );
+            }
+            const fb = fallbackCache.get(key);
+            if (fb) {
+              map.set(key, fb.edges);
+              for (const t of fb.titles) extra.set(t.key, t);
+            }
+          }),
+        );
+        if (!cancelled) {
+          setNeighbors(map);
+          setExtraTitles(extra);
+          setLoadError(null);
+        }
+      } catch (e) {
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, ratedSig, session?.user.id]);
+
+  const recs = useMemo(() => {
+    if (!ready) return [];
+    const merged = new Map<TitleKey, Title>([...extraTitles, ...Object.entries(snapshots), ...catalog]);
+    const weightsByKey = new Map(ratings.map((r) => [r.key, preferenceWeight(r.kind, r.value)]));
+    return rankRecommendations(weightsByKey, neighbors, merged, {
+      minYear: meta?.minYear ?? 1980,
+      filters,
+      picks: indexPicks(picks),
+      curatorWeights: weights,
+      exclude: hideWatchlist ? watchlist.map((w) => w.key) : [],
+    });
+  }, [ready, extraTitles, snapshots, catalog, ratings, neighbors, meta, filters, picks, weights, hideWatchlist, watchlist]);
+
+  if (error) return <p className="error">Couldn&apos;t load the data artifact: {error}</p>;
+  if (!ready) return <p className="muted">Loading…</p>;
+
+  const needsOnboarding = ratings.length < 5;
+  return (
+    <>
+      <h1>For you</h1>
+      <SampleBanner />
+      {needsOnboarding ? (
+        <div className="notice">
+          <p>
+            Rate {ONBOARDING_TARGET} movies and shows you know to get taste-matched picks
+            {ratings.length ? ` (${ratings.length} so far)` : ""}.
+          </p>
+          <Link className="btn" href="/onboarding/">
+            Start rating
+          </Link>
+        </div>
+      ) : null}
+      <Filters value={filters} onChange={updateFilters} />
+      <label className="row small muted" style={{ marginBottom: 10 }}>
+        <input type="checkbox" checked={hideWatchlist} onChange={(e) => setHideWatchlist(e.target.checked)} /> Hide titles on my
+        watchlist
+      </label>
+      {loadError ? <p className="error small">{loadError}</p> : null}
+      {recs.length === 0 ? (
+        <p className="muted">
+          {ratings.length ? "No matches for these filters yet — try widening them or rating a few more titles." : "Nothing yet."}
+        </p>
+      ) : (
+        <div className="list">
+          {recs.slice(0, shown).map((r) => (
+            <TitleCard
+              key={r.title.key}
+              title={getTitle(r.title.key) ?? r.title}
+              reason={r.reason}
+              badges={r.gem ? ["💎 Gem"] : undefined}
+            />
+          ))}
+        </div>
+      )}
+      {recs.length > shown ? (
+        <p style={{ textAlign: "center" }}>
+          <button type="button" className="btn secondary" onClick={() => setShown((n) => n + PAGE)}>
+            Show more
+          </button>
+        </p>
+      ) : null}
+    </>
+  );
+}

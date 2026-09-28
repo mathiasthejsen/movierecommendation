@@ -1,0 +1,31 @@
+{
+  "name": "movie-recommender",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "preview": "node scripts/serve-out.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:py": "python -m pytest -q",
+    "sample-data": "python -m pipeline.build --sample",
+    "icons": "node scripts/generate-icons.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.116.0",
+    "next": "16.3.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

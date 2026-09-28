@@ -1,0 +1,44 @@
+"use client";
+
+import { useApp } from "./AppProvider";
+
+export function SampleBanner() {
+  const { meta } = useApp();
+  if (!meta?.sample) return null;
+  return (
+    <div className="banner" role="note">
+      Sample data: a small built-in catalogue with synthetic scores. Run the data pipeline for real recommendations.
+    </div>
+  );
+}
+
+export function Attribution() {
+  const { meta } = useApp();
+  return (
+    <footer className="attribution">
+      <p>
+        <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer">
+          <strong>TMDB</strong>
+        </a>{" "}
+        — This product uses the TMDB API but is not endorsed or certified by TMDB. Streaming availability by{" "}
+        <a href="https://www.justwatch.com/" target="_blank" rel="noreferrer">
+          JustWatch
+        </a>
+        .
+      </p>
+      <p>
+        Film similarity derived from{" "}
+        <a href="https://grouplens.org/datasets/movielens/" target="_blank" rel="noreferrer">
+          MovieLens
+        </a>{" "}
+        (GroupLens, University of Minnesota; non-commercial use). Recommendation links mined from public Reddit threads
+        via the official API. Curator picks from public Letterboxd RSS feeds and your own shares.
+      </p>
+      {meta ? (
+        <p className="muted">
+          Data {meta.sample ? "(sample) " : ""}updated {new Date(meta.generatedAt).toLocaleDateString()} · region {meta.region}
+        </p>
+      ) : null}
+    </footer>
+  );
+}

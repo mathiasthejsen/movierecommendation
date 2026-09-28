@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:letterboxd="https://letterboxd.com" xmlns:tmdb="https://themoviedb.org" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Letterboxd - Sample Director</title>
+    <link>https://letterboxd.com/sampledirector/</link>
+    <description>Letterboxd - Sample Director (synthetic test fixture with list entries)</description>
+    <item>
+      <title>Films That Shaped Me</title>
+      <link>https://letterboxd.com/sampledirector/list/films-that-shaped-me/</link>
+      <guid isPermaLink="false">letterboxd-list-1</guid>
+      <pubDate>Fri, 18 Sep 2026 10:00:00 +0000</pubDate>
+      <description><![CDATA[ <p>A LIST INTRO THAT MUST NOT BE STORED</p>
+        <ul>
+          <li><a href="https://letterboxd.com/film/memories-of-murder/">Memories of Murder</a></li>
+          <li><a href="https://letterboxd.com/film/cure/">Cure</a></li>
+          <li><a href="https://letterboxd.com/film/taxi-driver/">Taxi Driver</a></li>
+          <li><a href="https://letterboxd.com/film/the-thing/">The Thing</a></li>
+        </ul>
+        <p>...plus 12 more</p> ]]></description>
+      <dc:creator>Sample Director</dc:creator>
+    </item>
+    <item>
+      <title>Heat, 1995 - ★★★★★</title>
+      <link>https://letterboxd.com/sampledirector/film/heat/</link>
+      <guid isPermaLink="false">letterboxd-review-2</guid>
+      <letterboxd:filmTitle>Heat</letterboxd:filmTitle>
+      <letterboxd:filmYear>1995</letterboxd:filmYear>
+      <letterboxd:memberRating>5.0</letterboxd:memberRating>
+      <tmdb:movieId>949</tmdb:movieId>
+      <description><![CDATA[ <p>Review.</p> ]]></description>
+    </item>
+  </channel>
+</rss>

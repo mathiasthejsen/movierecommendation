@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:letterboxd="https://letterboxd.com" xmlns:tmdb="https://themoviedb.org" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Letterboxd - Sample Curator</title>
+    <link>https://letterboxd.com/samplecurator/</link>
+    <description>Letterboxd - Sample Curator (synthetic test fixture)</description>
+    <item>
+      <title>Coherence, 2013 - ★★★★½</title>
+      <link>https://letterboxd.com/samplecurator/film/coherence/</link>
+      <guid isPermaLink="false">letterboxd-review-1</guid>
+      <pubDate>Mon, 21 Sep 2026 20:00:00 +1200</pubDate>
+      <letterboxd:watchedDate>2026-09-20</letterboxd:watchedDate>
+      <letterboxd:rewatch>No</letterboxd:rewatch>
+      <letterboxd:filmTitle>Coherence</letterboxd:filmTitle>
+      <letterboxd:filmYear>2013</letterboxd:filmYear>
+      <letterboxd:memberRating>4.5</letterboxd:memberRating>
+      <tmdb:movieId>220289</tmdb:movieId>
+      <description><![CDATA[ <p><img src="https://a.ltrbxd.com/poster.jpg"/></p> <p>REVIEW TEXT THAT MUST NOT BE STORED</p> ]]></description>
+      <dc:creator>Sample Curator</dc:creator>
+    </item>
+    <item>
+      <title>Primer, 2004</title>
+      <link>https://letterboxd.com/samplecurator/film/primer/</link>
+      <guid isPermaLink="false">letterboxd-watch-2</guid>
+      <letterboxd:filmTitle>Primer</letterboxd:filmTitle>
+      <letterboxd:filmYear>2004</letterboxd:filmYear>
+      <letterboxd:memberLike>Yes</letterboxd:memberLike>
+      <tmdb:movieId>14337</tmdb:movieId>
+      <description><![CDATA[ <p>Watched on Sunday.</p> ]]></description>
+      <dc:creator>Sample Curator</dc:creator>
+    </item>
+    <item>
+      <title>Superbad, 2007 - ★★★</title>
+      <link>https://letterboxd.com/samplecurator/film/superbad/</link>
+      <guid isPermaLink="false">letterboxd-review-3</guid>
+      <letterboxd:filmTitle>Superbad</letterboxd:filmTitle>
+      <letterboxd:filmYear>2007</letterboxd:filmYear>
+      <letterboxd:memberRating>3.0</letterboxd:memberRating>
+      <tmdb:movieId>8363</tmdb:movieId>
+      <description><![CDATA[ <p>Fine.</p> ]]></description>
+    </item>
+    <item>
+      <title>Taxi Driver, 1976 - ★★★★★</title>
+      <link>https://letterboxd.com/samplecurator/film/taxi-driver/</link>
+      <guid isPermaLink="false">letterboxd-review-4</guid>
+      <letterboxd:filmTitle>Taxi Driver</letterboxd:filmTitle>
+      <letterboxd:filmYear>1976</letterboxd:filmYear>
+      <letterboxd:memberRating>5.0</letterboxd:memberRating>
+      <tmdb:movieId>103</tmdb:movieId>
+      <description><![CDATA[ <p>Pre-1980, filtered out.</p> ]]></description>
+    </item>
+    <item>
+      <title>Memories of Murder, 2003 - ★★★★</title>
+      <link>https://letterboxd.com/samplecurator/film/memories-of-murder/</link>
+      <guid isPermaLink="false">letterboxd-review-5</guid>
+      <description><![CDATA[ <p>No filmTitle/tmdb tags: parsed from the item title and matched by title + year.</p> ]]></description>
+    </item>
+    <item>
+      <title>Chernobyl, 2019 - ★★★★★</title>
+      <link>https://letterboxd.com/samplecurator/film/chernobyl/</link>
+      <guid isPermaLink="false">letterboxd-review-6</guid>
+      <letterboxd:filmTitle>Chernobyl</letterboxd:filmTitle>
+      <letterboxd:filmYear>2019</letterboxd:filmYear>
+      <letterboxd:memberRating>5.0</letterboxd:memberRating>
+      <tmdb:tvId>87108</tmdb:tvId>
+      <description><![CDATA[ <p>A miniseries.</p> ]]></description>
+    </item>
+  </channel>
+</rss>

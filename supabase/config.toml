@@ -1,0 +1,8 @@
+# Minimal Supabase CLI config for deploying the Edge Function.
+# `supabase init` would generate a fuller file; only the function settings matter here.
+
+[functions.tmdb-proxy]
+# The function verifies the caller's user JWT itself (supabase.auth.getUser), which works
+# with both legacy JWT keys and the new publishable/secret API keys. The anon key alone
+# is rejected, so strangers can't use up the TMDB quota.
+verify_jwt = false

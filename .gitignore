@@ -1,0 +1,36 @@
+# --- secrets / local env ---
+.env
+.env.*
+!.env.example
+*.pem
+
+# --- raw & cached data (never commit MovieLens or API caches) ---
+# (anchored to the repo root: public/data is the generated artifact and IS committed)
+/data/
+ml-32m/
+ml-25m/
+*.zip
+
+# --- node / next ---
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# --- python ---
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# --- supabase local ---
+supabase/.temp/
+supabase/.branches/
+
+# --- os / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

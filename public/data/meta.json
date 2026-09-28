@@ -1,0 +1,67 @@
+{
+ "version": 2,
+ "generatedAt": "2026-09-28T10:24:00+00:00",
+ "sample": true,
+ "region": "US",
+ "minYear": 1980,
+ "shards": 4,
+ "counts": {
+  "titles": 137,
+  "movies": 109,
+  "tv": 28,
+  "withNeighbors": 137,
+  "curatorPicks": 8,
+  "movielensEdges": 4959,
+  "redditEdges": 134,
+  "tmdbEdges": 280,
+  "traktEdges": 0
+ },
+ "genres": {
+  "12": "Adventure",
+  "14": "Fantasy",
+  "16": "Animation",
+  "18": "Drama",
+  "27": "Horror",
+  "28": "Action",
+  "35": "Comedy",
+  "36": "History",
+  "37": "Western",
+  "53": "Thriller",
+  "80": "Crime",
+  "878": "Science Fiction",
+  "9648": "Mystery",
+  "10402": "Music",
+  "10749": "Romance",
+  "10751": "Family",
+  "10752": "War"
+ },
+ "providers": {
+  "8": {
+   "name": "Netflix",
+   "logo": null
+  },
+  "9": {
+   "name": "Amazon Prime Video",
+   "logo": null
+  },
+  "1899": {
+   "name": "Max",
+   "logo": null
+  },
+  "337": {
+   "name": "Disney Plus",
+   "logo": null
+  },
+  "11": {
+   "name": "MUBI",
+   "logo": null
+  }
+ },
+ "attribution": {
+  "tmdb": "This product uses the TMDB API but is not endorsed or certified by TMDB.",
+  "justwatch": "Streaming availability data provided by JustWatch via TMDB.",
+  "movielens": "Film similarity derived from the MovieLens ml-32m dataset (GroupLens, University of Minnesota). Non-commercial use only.",
+  "reddit": "Recommendation edges derived from public Reddit threads via the official API. No Reddit text is stored.",
+  "letterboxd": "Curator picks from public Letterboxd RSS feeds (IDs, ratings and links only)."
+ }
+}

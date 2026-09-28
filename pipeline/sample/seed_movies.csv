@@ -1,0 +1,112 @@
+tmdb_id,title,year,genres,clusters,vote_average,vote_count,runtime,overview
+141,Donnie Darko,2001,18|9648|878,mind|scifi,7.8,12000,113,A troubled teenager is visited by a giant rabbit who warns him the world will end in 28 days.
+274,The Silence of the Lambs,1991,80|18|53|27,crime|horror,8.3,16000,119,An FBI trainee seeks the help of an imprisoned cannibal psychiatrist to catch a serial killer.
+77,Memento,2000,9648|53,mind|crime,8.2,14000,113,A man with short-term memory loss hunts his wife's killer using notes and tattoos.
+1018,Mulholland Drive,2001,53|18|9648,mind|drama,7.7,6500,147,A dream-like mystery about an amnesiac woman and an aspiring actress in Los Angeles.
+38,Eternal Sunshine of the Spotless Mind,2004,878|18|10749,mind|drama,8.1,15000,108,A couple undergo a procedure to erase each other from their memories.
+1124,The Prestige,2006,18|9648|878,mind|crime,8.2,16000,130,Two rival stage magicians go to dangerous lengths to outdo each other.
+27205,Inception,2010,28|878|12,mind|scifi|action,8.4,36000,148,A thief who steals secrets through dreams is asked to plant an idea instead.
+11324,Shutter Island,2010,18|53|9648,mind|crime,8.2,23000,138,Two US marshals investigate a disappearance at a hospital for the criminally insane.
+14337,Primer,2004,878|18|53,mind|scifi,6.9,1900,77,Two engineers accidentally build a device with an unexpected side effect: time travel.
+220289,Coherence,2013,53|878|9648,mind|scifi,7.2,2600,89,Strange things happen at a dinner party on the night a comet passes overhead.
+181886,Enemy,2013,9648|53,mind|drama,6.9,4300,91,A history teacher discovers an actor who looks exactly like him.
+31011,Mr. Nobody,2009,878|18|10749|14,mind|drama,7.8,5800,141,The last mortal man on Earth recalls the many lives he might have lived.
+1381,The Fountain,2006,18|14|878|10749,mind|drama,6.9,2600,96,A story of love and mortality told across three intertwined timelines.
+473,Pi,1998,9648|18|53,mind,6.9,2200,84,A reclusive mathematician searches for a numerical pattern hidden in the stock market.
+492,Being John Malkovich,1999,35|14|18,mind|comedy,7.3,4200,113,A puppeteer finds a portal into the mind of a famous actor.
+4960,Synecdoche New York,2008,18,mind|drama,7.2,1300,124,A theatre director builds an ever-growing replica of the city for his masterwork.
+2666,Dark City,1998,878|9648|53,mind|scifi,7.4,2100,100,A man wakes with no memory in a city where the night never ends.
+63,Twelve Monkeys,1995,878|53|9648,mind|scifi,7.6,8300,129,A prisoner is sent back in time to stop a deadly virus from wiping out humanity.
+550,Fight Club,1999,18|53,mind|crime,8.4,29000,139,An insomniac office worker and a soap salesman start an underground fight club.
+4553,The Machinist,2004,53|18,mind|crime,7.5,5100,101,An industrial worker who hasn't slept in a year begins to doubt his sanity.
+206487,Predestination,2014,878|53,mind|scifi,7.4,6500,97,A temporal agent pursues a criminal who has eluded him across time.
+14139,Timecrimes,2007,878|53,mind|scifi,7.0,1100,92,A man stumbles into a time machine and must fix the mess he creates.
+26466,Triangle,2009,53|27|9648,mind|horror,6.9,2200,99,Yacht passengers board a deserted ocean liner and are caught in a strange loop.
+13363,The Man from Earth,2007,878|18,mind|scifi,7.6,2100,87,A professor tells his colleagues he has been alive for fourteen thousand years.
+145197,Upstream Color,2013,878|18,mind|scifi,6.4,700,96,Two strangers are drawn together by a life cycle they don't understand.
+638,Lost Highway,1997,9648|53,mind|horror,7.4,2700,134,A musician accused of murder inexplicably becomes someone else.
+1903,Vanilla Sky,2001,18|9648|878|10749,mind|drama,6.9,5300,136,A publishing magnate's life unravels after a disfiguring accident.
+670,Oldboy,2003,18|53|9648|28,crime|mind,8.2,9000,120,A man imprisoned for fifteen years without explanation is suddenly set free.
+807,Se7en,1995,80|9648|53,crime,8.4,21000,127,Two detectives hunt a killer who stages murders around the seven deadly sins.
+1949,Zodiac,2007,80|18|9648|53,crime,7.5,11000,157,Journalists and detectives become obsessed with an elusive serial killer.
+146233,Prisoners,2013,18|53|80,crime,8.1,12000,153,A father takes matters into his own hands when his daughter goes missing.
+210577,Gone Girl,2014,9648|53|18,crime,7.9,19000,149,A husband becomes the prime suspect after his wife disappears.
+242582,Nightcrawler,2014,80|18|53,crime,7.7,11000,117,A driven man muscles into the world of crime journalism in Los Angeles.
+6977,No Country for Old Men,2007,80|18|53,crime,7.9,12000,122,A hunter stumbles on drug money and is pursued by a relentless killer.
+11423,Memories of Murder,2003,80|18|53,crime,8.1,1900,132,Two detectives struggle to catch a serial killer in rural 1980s Korea.
+36095,Cure,1997,80|27|53|9648,crime|horror,7.4,600,111,A detective investigates murders committed by people with no memory of them.
+322,Mystic River,2003,53|80|18|9648,crime|drama,7.7,6700,138,A childhood trauma resurfaces when three old friends are linked by a murder.
+629,The Usual Suspects,1995,18|80|53,crime|tarantino,8.2,10000,106,A con man tells police an elaborate story about a legendary criminal.
+188166,Blue Ruin,2013,53|80|18,crime,6.9,1000,90,A drifter returns home to carry out an act of revenge.
+11454,Manhunter,1986,80|18|27|53,crime,6.8,1100,120,A retired profiler returns to hunt a killer and consults an imprisoned psychiatrist.
+320,Insomnia,2002,80|9648|53,crime,6.9,4200,118,A sleep-deprived detective investigates a murder under the midnight sun.
+273481,Sicario,2015,28|80|18|53,crime|action,7.4,9500,121,An idealistic agent joins a task force fighting the drug war on the border.
+496243,Parasite,2019,35|53|18,crime|drama,8.5,18000,133,A poor family schemes its way into the household of a wealthy one.
+103,Taxi Driver,1976,80|18,crime|drama,8.1,12000,114,A lonely veteran working nights as a cab driver descends into violence.
+78,Blade Runner,1982,878|18|53,scifi,7.9,14000,117,A detective hunts rogue synthetic humans in a rain-soaked future Los Angeles.
+9693,Children of Men,2006,18|28|53|878,scifi,7.6,8300,109,In a future where humanity has become infertile a pregnant woman must be protected.
+17431,Moon,2009,878|18,scifi|mind,7.6,5100,97,A lone worker nearing the end of his contract on the Moon makes a discovery.
+329865,Arrival,2016,18|878|9648,scifi|mind,7.6,18000,116,A linguist tries to communicate with mysterious visitors from space.
+264660,Ex Machina,2015,18|878,scifi|mind,7.6,14000,108,A programmer evaluates the consciousness of a humanoid AI.
+300668,Annihilation,2018,878|27|12|9648,scifi|horror,6.4,8800,115,A biologist enters a mysterious zone where the laws of nature don't apply.
+97370,Under the Skin,2013,18|878|27,scifi|horror|mind,5.9,2800,108,An alien in human form preys on men in Scotland.
+782,Gattaca,1997,53|878|10749,scifi,7.5,6500,106,A genetically inferior man assumes a stranger's identity to reach the stars.
+157336,Interstellar,2014,12|18|878,scifi|mind,8.4,36000,169,Explorers travel through a wormhole in search of a new home for humanity.
+152601,Her,2013,10749|878|18,scifi|drama,7.8,14000,126,A lonely writer falls in love with an operating system.
+603,The Matrix,1999,28|878,scifi|action|mind,8.2,26000,136,A hacker learns the world he knows is a simulation.
+348,Alien,1979,27|878,scifi|horror,8.2,15000,117,The crew of a commercial spacecraft encounter a deadly lifeform.
+679,Aliens,1986,28|53|878,scifi|action|horror,7.9,10000,137,A survivor returns to the planet where her crew was killed alongside a squad of marines.
+335984,Blade Runner 2049,2017,878|18,scifi,7.6,14000,164,A young blade runner uncovers a secret that could plunge society into chaos.
+68,Brazil,1985,35|878,scifi|comedy|mind,7.6,2900,132,A daydreaming bureaucrat is caught up in a dystopian nightmare.
+37165,The Truman Show,1998,35|18,scifi|drama|mind,8.1,18000,103,A man discovers his entire life is a television show.
+280,Terminator 2: Judgment Day,1991,28|53|878,action|scifi,8.1,13000,137,A cyborg is sent back in time to protect a boy who will lead the resistance.
+1091,The Thing,1982,27|9648|878,horror|scifi,8.1,7000,109,An Antarctic research crew is hunted by a shape-shifting alien.
+694,The Shining,1980,27|53,horror,8.2,17000,144,A writer becomes the winter caretaker of an isolated hotel with a dark past.
+493922,Hereditary,2018,27|9648|53,horror,7.3,8000,127,A grieving family is haunted by tragic and disturbing occurrences.
+530385,Midsommar,2019,27|18|9648,horror,7.1,7000,148,A couple travel to a Swedish midsummer festival that turns sinister.
+310131,The Witch,2015,27|9648|14,horror,6.7,5500,92,A Puritan family is torn apart by forces of witchcraft in 1630s New England.
+270303,It Follows,2014,27|9648|53,horror,6.6,6000,100,A young woman is followed by an unknown supernatural force after a sexual encounter.
+419430,Get Out,2017,9648|53|27,horror|crime,7.6,16000,104,A young man uncovers a disturbing secret when he meets his girlfriend's family.
+242224,The Babadook,2014,18|27,horror,6.4,4700,94,A widowed mother and her son are tormented by a sinister presence.
+680,Pulp Fiction,1994,53|80,tarantino|crime,8.5,28000,154,The lives of hitmen a boxer and a gangster's wife intertwine in Los Angeles.
+500,Reservoir Dogs,1992,80|53,tarantino|crime,8.1,14000,99,A jewel heist goes wrong and the surviving criminals suspect a traitor.
+769,Goodfellas,1990,18|80,tarantino|crime,8.5,12000,145,The rise and fall of a mob associate over three decades.
+275,Fargo,1996,80|18|53,tarantino|crime|comedy,7.9,7300,98,A car salesman's scheme to have his wife kidnapped goes badly wrong.
+115,The Big Lebowski,1998,35|80,tarantino|comedy,7.8,11000,117,A laid-back bowler is mistaken for a millionaire and drawn into a kidnapping plot.
+107,Snatch,2000,80|35,tarantino|comedy,7.8,9000,103,Boxing promoters gangsters and a stolen diamond collide in London.
+100,Lock Stock and Two Smoking Barrels,1998,35|80,tarantino|comedy,8.1,6200,105,Four friends owe a crime boss a fortune after a rigged card game.
+64690,Drive,2011,18|53|80,tarantino|crime|action,7.6,12000,100,A stunt driver moonlighting as a getaway driver gets into trouble.
+8321,In Bruges,2008,35|18|80,tarantino|comedy|drama,7.5,5100,107,Two hitmen hide out in Belgium after a job goes wrong.
+949,Heat,1995,28|80|18|53,crime|action,7.9,7300,170,A detective pursues a professional thief in Los Angeles.
+278,The Shawshank Redemption,1994,18|80,drama,8.7,27000,142,A banker sentenced to life in prison forms a lasting friendship.
+13,Forrest Gump,1994,35|18|10749,drama,8.5,27000,142,A kind-hearted man witnesses and shapes decades of American history.
+14,American Beauty,1999,18,drama,8.0,12000,122,A suburban father's midlife crisis upends his family.
+334,Magnolia,1999,18,drama,7.6,3900,188,Lives across the San Fernando Valley intersect over one day.
+641,Requiem for a Dream,2000,18,drama|mind,8.0,10000,102,Four people's dreams are destroyed by addiction.
+44214,Black Swan,2010,18|53,drama|mind|horror,7.7,15000,108,A ballerina's quest for perfection unravels her sanity.
+153,Lost in Translation,2003,18|35|10749,drama,7.4,8000,102,Two lonely Americans form a bond in Tokyo.
+37799,The Social Network,2010,18,drama,7.4,12000,121,The founding of a social network and the lawsuits that followed.
+244786,Whiplash,2014,18|10402,drama,8.4,15000,107,A young drummer is pushed to the edge by a ruthless instructor.
+194,Amélie,2001,35|10749,drama|comedy,7.9,11000,122,A shy waitress in Paris decides to change the lives of those around her.
+129,Spirited Away,2001,16|10751|14,anime,8.5,16000,125,A girl wanders into a world of spirits and must free her parents.
+128,Princess Mononoke,1997,12|14|16,anime,8.3,8000,134,A prince becomes embroiled in a war between forest gods and humans.
+8392,My Neighbor Totoro,1988,14|16|10751,anime,8.1,8000,86,Two sisters befriend forest spirits in rural Japan.
+4935,Howl's Moving Castle,2004,14|16|12,anime,8.4,10000,119,A young woman cursed with old age seeks refuge in a wizard's walking castle.
+149,Akira,1988,16|878|28,anime|scifi,7.9,4500,124,A biker gang member gains telekinetic powers in a post-war Neo-Tokyo.
+10494,Perfect Blue,1997,16|53,anime|mind|horror,8.2,2500,81,A pop idol turned actress is stalked and loses her grip on reality.
+4977,Paprika,2006,16|878|53,anime|mind,7.8,2700,90,A device that lets therapists enter dreams is stolen.
+372058,Your Name.,2016,16|10749|18,anime|drama,8.5,11000,106,Two teenagers discover they are swapping bodies.
+137,Groundhog Day,1993,10749|14|18|35,comedy|mind,7.6,7800,101,A weatherman relives the same day over and over.
+4638,Hot Fuzz,2007,80|28|35,comedy|action,7.6,6300,121,A top London cop is transferred to a suspiciously quiet village.
+747,Shaun of the Dead,2004,27|35,comedy|horror,7.5,7000,99,A slacker tries to get his life together during a zombie outbreak.
+120467,The Grand Budapest Hotel,2014,35|18,comedy|drama,8.0,15000,99,A legendary concierge and his lobby boy are caught up in a theft.
+8363,Superbad,2007,35,comedy,7.2,7800,113,Two co-dependent high schoolers try to enjoy one last party.
+562,Die Hard,1988,28|53,action,7.8,11000,132,A cop battles terrorists who have seized a Los Angeles skyscraper.
+76341,Mad Max: Fury Road,2015,28|12|878,action|scifi,7.6,22000,121,A drifter and a rebel warrior flee a tyrant across the desert.
+245891,John Wick,2014,28|53,action,7.4,19000,101,A retired hitman seeks vengeance on the gangsters who wronged him.
+5548,RoboCop,1987,28|53|878,action|scifi,7.3,3600,102,A murdered cop is rebuilt as a cyborg law enforcer.
+106,Predator,1987,878|28|12|53,action|scifi|horror,7.5,7000,107,A special forces team is hunted by an alien warrior in the jungle.
+105,Back to the Future,1985,12|35|878,action|comedy|scifi,8.3,19000,116,A teenager is accidentally sent thirty years into the past.
+329,Jurassic Park,1993,12|878,action|scifi,7.9,15000,127,Dinosaurs cloned for a theme park break loose.
+155,The Dark Knight,2008,18|28|80|53,action|crime,8.5,32000,152,Batman faces a criminal mastermind who wants to plunge Gotham into chaos.
+85,Raiders of the Lost Ark,1981,12|28,action,7.9,12000,115,An archaeologist races to find the Ark of the Covenant.

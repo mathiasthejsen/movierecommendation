@@ -1,0 +1,29 @@
+tmdb_id,title,year,genres,clusters,vote_average,vote_count,seasons,status,runtime,overview
+1396,Breaking Bad,2008,18|80,crime|drama,8.9,14000,5,Ended,47,A chemistry teacher turned drug manufacturer builds an empire in New Mexico.
+60059,Better Call Saul,2015,80|18,crime|drama,8.7,5200,6,Ended,50,A small-time lawyer's transformation into a criminal defence attorney.
+1438,The Wire,2002,80|18,crime|drama,8.6,2300,5,Ended,60,The Baltimore drug scene seen through the eyes of dealers and police.
+1398,The Sopranos,1999,18|80,crime|drama,8.6,2800,6,Ended,50,A New Jersey mob boss struggles to balance family and crime.
+46648,True Detective,2014,18|80|9648,crime|mind,8.3,3500,4,Ended,60,Detectives unravel dark cases across different eras in an anthology.
+67744,Mindhunter,2017,80|18,crime,8.4,2300,2,Canceled,60,Two FBI agents interview imprisoned serial killers to understand them.
+60622,Fargo,2014,80|18|35,crime|tarantino,8.3,2400,5,Returning Series,53,An anthology of crime stories set in the frozen Midwest.
+70523,Dark,2017,80|18|9648|10765,mind|scifi,8.4,6800,3,Ended,60,A missing child reveals the secrets of four families across time.
+66732,Stranger Things,2016,10765|9648|10759,scifi|horror,8.6,17000,5,Ended,50,Kids in a small town face supernatural forces and secret experiments.
+1920,Twin Peaks,1990,9648|18|80,mind|crime|horror,8.3,1600,3,Ended,47,An FBI agent investigates the murder of a homecoming queen in a strange town.
+42009,Black Mirror,2011,10765|18|9648,scifi|mind,8.3,5000,7,Returning Series,60,An anthology about the dark side of technology.
+63247,Westworld,2016,10765|37,scifi|mind,8.1,5100,4,Canceled,62,Android hosts in a Wild West theme park begin to question their reality.
+95396,Severance,2022,18|9648|10765,mind|scifi,8.4,2100,2,Returning Series,50,Office workers have their work and personal memories surgically divided.
+54344,The Leftovers,2014,18|9648|10765,mind|drama,7.9,1100,3,Ended,60,A town grapples with the sudden disappearance of two percent of the world.
+62560,Mr. Robot,2015,80|18|9648,mind|crime,8.3,4000,4,Ended,49,A hacker with social anxiety is recruited by an anarchist group.
+87108,Chernobyl,2019,18,drama,8.7,5600,1,Ended,65,The true story of the 1986 nuclear disaster and its aftermath.
+2316,The Office,2005,35,comedy,8.6,4300,9,Ended,22,A mockumentary about the employees of a paper company.
+1400,Seinfeld,1989,35,comedy,8.3,2100,9,Ended,22,A comedian and his friends navigate the trivia of everyday life in New York.
+1668,Friends,1994,35|18,comedy,8.4,8000,10,Ended,22,Six friends navigate life and love in Manhattan.
+19885,Sherlock,2010,80|18|9648,crime,8.5,5100,4,Ended,88,A modern update finds the famous detective solving crimes in London.
+4087,The X-Files,1993,9648|10765|18,scifi|mind|horror,8.4,2700,11,Ended,45,Two FBI agents investigate unexplained cases.
+4607,Lost,2004,9648|10759|18,mind|scifi,7.9,3600,6,Ended,45,Survivors of a plane crash are stranded on a mysterious island.
+94605,Arcane,2021,16|10765|10759,anime|scifi,8.7,4600,2,Ended,40,Sisters fight on opposite sides of a war between two cities.
+76331,Succession,2018,18,drama,8.3,2300,4,Ended,60,A media dynasty's children compete to control the family company.
+136315,The Bear,2022,18|35,drama|comedy,8.2,1300,4,Returning Series,34,A young chef returns to Chicago to run his family's sandwich shop.
+4613,Band of Brothers,2001,18|10768|10759,action|drama,8.5,3300,1,Ended,60,The story of Easy Company from training through the end of World War II.
+1437,Firefly,2002,37|18|10759|10765,scifi|action,8.3,2500,1,Canceled,44,A crew of outlaws takes any job to survive on the fringes of space.
+1972,Battlestar Galactica,2004,10759|18|10765,scifi|action,8.2,1300,4,Ended,45,Humanity's last survivors flee a relentless machine enemy.
