@@ -12,6 +12,7 @@ import { loadNeighbors } from "@/lib/artifact";
 import { categoryLabel } from "@/lib/categories";
 import { ONBOARDING_TARGET } from "@/lib/config";
 import { isFollowed } from "@/lib/curators";
+import { refreshFamily } from "@/lib/family";
 import { timeAgo } from "@/lib/pipeline";
 import {
   filterByCategories,
@@ -183,7 +184,8 @@ export default function FeedPage() {
     if (refreshing) return;
     setRefreshing(true);
     try {
-      await syncNow();
+      // Also reload family watchlists (for the Watchlist → Together / partner tabs).
+      await Promise.all([syncNow(), refreshFamily()]);
     } finally {
       setPendingRefresh(true);
     }

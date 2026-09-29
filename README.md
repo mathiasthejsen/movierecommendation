@@ -149,7 +149,9 @@ Everything below can be done from the project folder with the [Supabase CLI](htt
 
 1. **Sign in and link:** `supabase login`, then `supabase link --project-ref <your-project-ref>`. The project ref is the `xxxx` in `https://xxxx.supabase.co`, and `supabase projects list` shows it.
 2. **Schema and RLS:** `supabase db query --linked -f supabase/schema.sql` (or paste the file into the SQL editor). Then run the queries in [`supabase/checks.sql`](supabase/checks.sql); every check should come back empty or `true`. Keep **row-level security on for every table**. The schema enables it for `ratings`, `watchlist`, `curator_picks` and `tmdb_proxy_usage`, and gives no access to the `anon` role.
-   - `ratings` and `watchlist`: `auth.uid() = user_id`, so each person sees only their own rows.
+   - `ratings`: `auth.uid() = user_id` for everything, so ratings are private.
+   - `watchlist`: each person writes only their own rows. Every signed-in family member can read everyone's rows, **unless** that person set `profiles.share_watchlist = false`. The read policy checks this with `exists()` on `profiles`.
+   - `profiles` (display name and sharing setting): readable by every signed-in member; each person can insert or update only their own row. No emails are stored.
    - `curator_picks`: every signed-in family member can read; only the person who added a pick can insert, update or delete it. No captions or media are stored.
 3. **Login settings:** edit the URLs in [`supabase/config.toml`](supabase/config.toml) for your Pages site, run `supabase config diff` to preview, then `supabase config push`. The file turns **sign-ups off** and sets the **Site URL** and **Redirect URLs**, and it changes nothing else. This family-only setup has no allow-list: people who weren't invited can't get a session, and the app shows *"This app is private — ask the owner for an invite."*
 4. **Edge Function (TMDB proxy):**
@@ -199,6 +201,23 @@ How it behaves:
 1. Make sure Supabase can email them (see *Login emails on the free plan* above).
 2. In Supabase, go to **Authentication → Users → Add user → Send invitation** and enter their email address. Or choose **Create new user** with *Auto Confirm User* ticked; that sends no email.
 3. They open the app and use **Me → Send login link**, or click the invite link. That's it: they stay signed in on that device.
+4. **Set your name:** on **Me → Family → Your name**. It starts as the part of your email before the @, and it's the only thing family members see. Nobody else ever sees your email.
+
+**What's shared with the family, and what isn't:**
+
+| | Who can see it |
+|---|---|
+| **Watchlist** | Everyone in the family, **by default**. Turn it off under **Me → Share my watchlist with family**. The database enforces this (row-level security), not just the app. |
+| **Ratings** | **Only you.** They're never shared, and they only shape your own recommendations. |
+| **Curator picks** you add | Everyone in the family (so shared Instagram/TikTok picks help everyone). |
+| **Name** | Everyone in the family. |
+
+Shared watchlists appear under **Watchlist**:
+- **Mine** is your own list.
+- **Together** has titles on your list *and* someone else's, best match for you first, with initials showing who added each one. Use **🎲 Tonight's pick** to choose at random from the top 5.
+- A tab with your partner's name shows their list (read-only), with **+ Add to mine**. With more than two people, a picker chooses whose list to show.
+- **↻ Refresh** on For you reloads everyone's lists, and the last copy is kept for offline use.
+
 ## Deploy to GitHub Pages on your personal account
 
 Nothing has been pushed anywhere. This repository only has **local commits**. Follow these steps on **your personal GitHub account**:

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { DataUpdatePanel } from "@/components/DataUpdatePanel";
+import { ProfileSettings } from "@/components/ProfileSettings";
 import { Poster, TypeBadge } from "@/components/TitleCard";
 import { RatingControl } from "@/components/RatingControl";
 import { BASE_PATH, supabaseConfigured } from "@/lib/config";
@@ -112,6 +113,9 @@ export default function AccountPage() {
       ) : (
         <Login />
       )}
+
+      {/* Signed-in only: display name + watchlist sharing. */}
+      <ProfileSettings />
 
       {/* Renders nothing unless signed in and the trigger-pipeline function is configured. */}
       <DataUpdatePanel />

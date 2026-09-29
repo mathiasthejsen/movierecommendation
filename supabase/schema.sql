@@ -4,7 +4,12 @@
 -- Access model (family-only):
 --   * Open sign-ups are DISABLED in Supabase Auth; family members are invited from the dashboard.
 --   * The browser uses the anon/publishable key. Row-level security protects every table.
---   * ratings / watchlist: each person reads and writes only their own rows.
+--   * ratings: private. Each person reads and writes only their own rows.
+--   * watchlist: each person writes only their own rows. Every signed-in family member can
+--     read everyone's watchlist, unless that person turned sharing off
+--     (profiles.share_watchlist = false). Enforced in RLS, not just the UI.
+--   * profiles: display name + sharing setting. Everyone signed in can read them; each person
+--     can insert/update only their own row. No emails are stored here.
 --   * curator_picks: every signed-in family member can read all picks; only the person who
 --     added a pick can insert, update or delete it.
 --   * tmdb_proxy_usage: no client access at all; used by the Edge Function for rate limiting.
@@ -43,6 +48,17 @@ create table if not exists public.watchlist (
 );
 
 -- ---------------------------------------------------------------------------------
+-- profiles: family display names and the watchlist-sharing setting.
+create table if not exists public.profiles (
+  user_id         uuid        primary key default auth.uid() references auth.users (id) on delete cascade,
+  display_name    text        not null check (char_length(btrim(display_name)) between 1 and 40),
+  share_watchlist boolean     not null default true,
+  created_at      timestamptz not null default now()
+);
+-- Safe to re-run on older installs that created the table without the setting.
+alter table public.profiles add column if not exists share_watchlist boolean not null default true;
+
+-- ---------------------------------------------------------------------------------
 -- curator_picks: titles recommended by an Instagram/TikTok curator, added via the
 -- Share Target or the manual form. No captions or media are stored.
 create table if not exists public.curator_picks (
@@ -65,6 +81,7 @@ create index if not exists curator_picks_media_key_idx on public.curator_picks (
 alter table public.ratings       enable row level security;
 alter table public.watchlist     enable row level security;
 alter table public.curator_picks enable row level security;
+alter table public.profiles      enable row level security;
 
 drop policy if exists "ratings: own rows" on public.ratings;
 create policy "ratings: own rows" on public.ratings
@@ -72,9 +89,49 @@ create policy "ratings: own rows" on public.ratings
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+-- Watchlist: read your own rows, plus other family members' rows unless they turned
+-- sharing off. A member without a profile row counts as sharing (the default).
 drop policy if exists "watchlist: own rows" on public.watchlist;
-create policy "watchlist: own rows" on public.watchlist
-  for all to authenticated
+drop policy if exists "watchlist: read own or shared" on public.watchlist;
+create policy "watchlist: read own or shared" on public.watchlist
+  for select to authenticated
+  using (
+    (select auth.uid()) = user_id
+    or not exists (
+      select 1 from public.profiles p
+       where p.user_id = watchlist.user_id and p.share_watchlist = false
+    )
+  );
+
+drop policy if exists "watchlist: insert own" on public.watchlist;
+create policy "watchlist: insert own" on public.watchlist
+  for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "watchlist: update own" on public.watchlist;
+create policy "watchlist: update own" on public.watchlist
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "watchlist: delete own" on public.watchlist;
+create policy "watchlist: delete own" on public.watchlist
+  for delete to authenticated
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "profiles: family can read" on public.profiles;
+create policy "profiles: family can read" on public.profiles
+  for select to authenticated
+  using (true);
+
+drop policy if exists "profiles: insert own" on public.profiles;
+create policy "profiles: insert own" on public.profiles
+  for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "profiles: update own" on public.profiles;
+create policy "profiles: update own" on public.profiles
+  for update to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
@@ -100,8 +157,10 @@ create policy "picks: delete own" on public.curator_picks
   using ((select auth.uid()) = added_by);
 
 -- The anon role (not signed in) gets nothing.
-revoke all on public.ratings, public.watchlist, public.curator_picks from anon;
+revoke all on public.ratings, public.watchlist, public.curator_picks, public.profiles from anon;
 grant select, insert, update, delete on public.ratings, public.watchlist, public.curator_picks to authenticated;
+revoke delete on public.profiles from authenticated;
+grant select, insert, update on public.profiles to authenticated;
 
 -- ---------------------------------------------------------------------------------
 -- Per-user rate limiting for the TMDB proxy Edge Function (fixed window).

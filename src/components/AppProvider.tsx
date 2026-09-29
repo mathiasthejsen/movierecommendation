@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { isNewDataAvailable, loadArtifactCurators, loadCatalog, loadMeta } from "@/lib/artifact";
 import { BASE_PATH } from "@/lib/config";
+import { clearFamily, ensureProfile, refreshFamily } from "@/lib/family";
 import { flush, setTitleLookup, syncNow, useStore } from "@/lib/store";
 import { getSupabase } from "@/lib/supabase";
 import type { CuratorPick, Meta, Title, TitleKey } from "@/lib/types";
@@ -73,14 +74,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
-      if (data.session) void syncNow();
+      if (data.session) {
+        void syncNow();
+        void ensureProfile().then(refreshFamily);
+      }
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
-      if (s && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) void syncNow();
+      if (s && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+        void syncNow();
+        void ensureProfile().then(refreshFamily);
+      }
+      if (event === "SIGNED_OUT") clearFamily();
     });
     const onOnline = () => void flush();
-    const onVisible = () => document.visibilityState === "visible" && void syncNow();
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      void syncNow();
+      void refreshFamily();
+    };
     window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisible);
     return () => {

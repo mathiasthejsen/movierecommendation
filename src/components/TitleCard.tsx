@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { posterUrl } from "@/lib/config";
 import { tmdbUrl } from "@/lib/keys";
-import { toggleWatchlist, useStore } from "@/lib/store";
+import { addToWatchlist, toggleWatchlist, useStore } from "@/lib/store";
 import type { Title } from "@/lib/types";
 import { useApp } from "./AppProvider";
 import { RatingControl } from "./RatingControl";
@@ -82,12 +82,18 @@ export function TitleCard({
   reason,
   badges,
   dimWhenRated = false,
+  extra,
+  watchMode = "toggle",
 }: {
   title: Title;
   reason?: string;
   badges?: string[];
   /** Feed: keep a card in place after rating it, but fade it so the list doesn't jump. */
   dimWhenRated?: boolean;
+  /** Extra content under the meta line (e.g. who added it). */
+  extra?: ReactNode;
+  /** "addOnly": someone else's list; offers "+ Add to mine" and shows "✓ Also on yours" instead of a toggle. */
+  watchMode?: "toggle" | "addOnly";
 }) {
   const [open, setOpen] = useState(false);
   const [overflows, setOverflows] = useState(false);
@@ -125,6 +131,7 @@ export function TitleCard({
           ))}
         </h3>
         <TitleMeta title={title} />
+        {extra}
         {reason ? <p className="reason">{reason}</p> : null}
         <Providers title={title} />
         {title.overview ? (
@@ -141,14 +148,24 @@ export function TitleCard({
         ) : null}
         <div className="actions">
           <RatingControl title={title} />
-          <button
-            type="button"
-            className={inWatchlist ? "chip on" : "chip"}
-            aria-pressed={inWatchlist}
-            onClick={() => toggleWatchlist(title.key, title)}
-          >
-            {inWatchlist ? "✓ Watchlist" : "+ Watchlist"}
-          </button>
+          {watchMode === "addOnly" ? (
+            inWatchlist ? (
+              <span className="badge also-yours">✓ Also on yours</span>
+            ) : (
+              <button type="button" className="chip" onClick={() => addToWatchlist(title.key, title)}>
+                + Add to mine
+              </button>
+            )
+          ) : (
+            <button
+              type="button"
+              className={inWatchlist ? "chip on" : "chip"}
+              aria-pressed={inWatchlist}
+              onClick={() => toggleWatchlist(title.key, title)}
+            >
+              {inWatchlist ? "✓ Watchlist" : "+ Watchlist"}
+            </button>
+          )}
           <Link className="chip like-this" href={`/similar/?key=${encodeURIComponent(title.key)}`}>
             More like this
           </Link>

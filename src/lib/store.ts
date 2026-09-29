@@ -4,6 +4,7 @@ import { useRef, useSyncExternalStore } from "react";
 import { getSupabase } from "./supabase";
 import { mergeRecords } from "./sync";
 import { parseKey } from "./keys";
+import { withAdded } from "./together";
 import type { RatingKind, Title, TitleKey, UserRating, WatchItem } from "./types";
 
 const STORAGE_KEY = "movie-recommender:v2";
@@ -137,6 +138,17 @@ export function toggleWatchlist(key: TitleKey, title?: Title): void {
   void flush();
 }
 
+/** "+ Add to mine" from a family member's list: add-only, never removes. */
+export function addToWatchlist(key: TitleKey, title?: Title): void {
+  let changed = false;
+  setState((s) => {
+    const watchlist = withAdded(s.watchlist, key, now());
+    if (watchlist === s.watchlist) return s;
+    changed = true;
+    return { ...s, watchlist, titles: snapshot(s, title), dirtyWatchlist: addDirty(s.dirtyWatchlist, key) };
+  });
+  if (changed) void flush();
+}
 export function addPicks(items: { title: Title; curator: string; postUrl: string | null; source: "share" | "manual" }[]): void {
   setState((s) => {
     const userPicks = { ...s.userPicks };
@@ -253,8 +265,9 @@ async function doSync(): Promise<void> {
   }
   try {
     const [ratingsRes, watchRes, picksRes] = await Promise.all([
-      supabase.from("ratings").select("media_key,kind,value,updated_at,title,year,poster_path"),
-      supabase.from("watchlist").select("media_key,added_at,title,year,poster_path"),
+      supabase.from("ratings").select("media_key,kind,value,updated_at,title,year,poster_path").eq("user_id", userId),
+      // Family members can read each other's watchlists now, so "mine" must filter explicitly.
+      supabase.from("watchlist").select("media_key,added_at,title,year,poster_path").eq("user_id", userId),
       supabase.from("curator_picks").select("id,media_key,curator,post_url,source,added_by,created_at,title,year,poster_path"),
     ]);
     for (const res of [ratingsRes, watchRes, picksRes]) if (res.error) throw res.error;
@@ -327,12 +340,12 @@ export async function flush(): Promise<void> {
           upR.map((r) => ({ user_id: userId, media_key: r.key, kind: r.kind, value: r.value, updated_at: r.updatedAt, ...rowMeta(r.key) })),
         ),
       );
-    if (delR.length) ops.push(supabase.from("ratings").delete().in("media_key", delR));
+    if (delR.length) ops.push(supabase.from("ratings").delete().eq("user_id", userId).in("media_key", delR));
     if (upW.length)
       ops.push(
         supabase.from("watchlist").upsert(upW.map((w) => ({ user_id: userId, media_key: w.key, added_at: w.addedAt, ...rowMeta(w.key) }))),
       );
-    if (delW.length) ops.push(supabase.from("watchlist").delete().in("media_key", delW));
+    if (delW.length) ops.push(supabase.from("watchlist").delete().eq("user_id", userId).in("media_key", delW));
     if (deletedPicks.length) ops.push(supabase.from("curator_picks").delete().in("id", deletedPicks.map((p) => p.id)));
     let inserted: PickRow[] = [];
     if (newPicks.length) {
