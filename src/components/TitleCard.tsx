@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { posterUrl } from "@/lib/config";
 import { tmdbUrl } from "@/lib/keys";
-import { addToWatchlist, toggleWatchlist, useStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import type { Title } from "@/lib/types";
 import { useApp } from "./AppProvider";
+import { useWatchlistActions } from "./MatchSheet";
 import { RatingControl } from "./RatingControl";
 
 function hue(s: string): number {
@@ -100,6 +101,8 @@ export function TitleCard({
   const overviewRef = useRef<HTMLParagraphElement>(null);
   const rated = useStore((s) => Boolean(s.ratings[title.key] && !s.ratings[title.key].deleted));
   const inWatchlist = useStore((s) => Boolean(s.watchlist[title.key] && !s.watchlist[title.key].deleted));
+  // All adds go through the match-sheet provider ("It's a match" popup).
+  const watchlist = useWatchlistActions();
 
   // Only offer "More" when the 2-line clamp actually hides text.
   useLayoutEffect(() => {
@@ -152,7 +155,7 @@ export function TitleCard({
             inWatchlist ? (
               <span className="badge also-yours">✓ Also on yours</span>
             ) : (
-              <button type="button" className="chip" onClick={() => addToWatchlist(title.key, title)}>
+              <button type="button" className="chip" onClick={() => watchlist.add(title.key, title)}>
                 + Add to mine
               </button>
             )
@@ -161,7 +164,7 @@ export function TitleCard({
               type="button"
               className={inWatchlist ? "chip on" : "chip"}
               aria-pressed={inWatchlist}
-              onClick={() => toggleWatchlist(title.key, title)}
+              onClick={() => watchlist.toggle(title.key, title)}
             >
               {inWatchlist ? "✓ Watchlist" : "+ Watchlist"}
             </button>

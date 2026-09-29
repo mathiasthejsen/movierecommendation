@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { CategoryBar } from "@/components/CategoryBar";
 import { TitleCard } from "@/components/TitleCard";
@@ -52,7 +53,18 @@ function WhoAdded({ people }: { people: { id: string; name: string }[] }) {
 }
 
 export default function WatchlistPage() {
+  // useSearchParams needs a Suspense boundary in a static export.
+  return (
+    <Suspense fallback={<p className="muted">Loading…</p>}>
+      <Watchlist />
+    </Suspense>
+  );
+}
+
+function Watchlist() {
   const { ready, getTitle, catalog, meta, session } = useApp();
+  const params = useSearchParams();
+  const [highlight, setHighlight] = useState<TitleKey | null>(null);
   const items = useStore(activeWatchlist);
   const ratings = useStore(activeRatings);
   const family = useFamily((s) => s);
@@ -76,6 +88,27 @@ export default function WatchlistPage() {
   useEffect(() => {
     if (signedIn) void refreshFamily();
   }, [signedIn]);
+
+  // Deep link from the "It's a match" sheet: /watchlist/?tab=together&highlight=movie:603
+  useEffect(() => {
+    const t = params.get("tab");
+    if (t === "together" || t === "mine" || t === "member") setTab(t);
+    const h = params.get("highlight");
+    setHighlight(h || null);
+  }, [params]);
+  const scrolledFor = useRef<TitleKey | null>(null);
+  useEffect(() => {
+    if (!highlight || scrolledFor.current === highlight) return;
+    const el = document.getElementById(`together-${highlight}`);
+    if (!el) return; // list not rendered yet; try again on the next render
+    scrolledFor.current = highlight;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+    window.setTimeout(() => {
+      setHighlight(null);
+      scrolledFor.current = null;
+    }, 4000);
+  });
 
   // Neighbour data for my ratings, to rank "Together" by my personal recommendation score.
   const ratedKeys = useMemo(() => ratings.map((r) => r.key).sort(), [ratings]);
@@ -191,11 +224,12 @@ export default function WatchlistPage() {
               ) : null}
               <div className="list">
                 {togetherFiltered.map(({ entry, title }) => (
-                  <TitleCard
-                    key={title.key}
-                    title={title}
-                    extra={<WhoAdded people={[meId!, ...entry.with].map((id) => ({ id, name: nameOf(id) }))} />}
-                  />
+                  <div key={title.key} id={`together-${title.key}`} className={highlight === title.key ? "highlighted" : undefined}>
+                    <TitleCard
+                      title={title}
+                      extra={<WhoAdded people={[meId!, ...entry.with].map((id) => ({ id, name: nameOf(id) }))} />}
+                    />
+                  </div>
                 ))}
               </div>
             </>

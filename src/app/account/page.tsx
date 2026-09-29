@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp } from "@/components/AppProvider";
+import { Credits } from "@/components/Chrome";
 import { DataUpdatePanel } from "@/components/DataUpdatePanel";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { Poster, TypeBadge } from "@/components/TitleCard";
@@ -166,6 +167,11 @@ export default function AccountPage() {
           picks{meta.sample ? " · sample data" : ""}
         </p>
       ) : null}
+
+      <details className="about-credits">
+        <summary>About &amp; credits</summary>
+        <Credits />
+      </details>
     </>
   );
 }

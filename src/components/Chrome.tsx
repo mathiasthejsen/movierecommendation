@@ -13,10 +13,15 @@ export function SampleBanner() {
   );
 }
 
-export function Attribution() {
+/**
+ * Data credits. TMDB requires its attribution and "not endorsed or certified" notice somewhere
+ * in the app (an About/credits section is fine), and JustWatch must be credited for watch
+ * providers. Shown in the collapsible "About & credits" section on the Me page.
+ */
+export function Credits() {
   const { meta } = useApp();
   return (
-    <footer className="attribution">
+    <div className="credits">
       <p>
         <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer">
           <strong>TMDB</strong>
@@ -49,7 +54,7 @@ export function Attribution() {
           Data {meta.sample ? "(sample) " : ""}updated {new Date(meta.generatedAt).toLocaleDateString()} · region {meta.region}
         </p>
       ) : null}
-    </footer>
+    </div>
   );
 }
 

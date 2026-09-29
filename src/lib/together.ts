@@ -141,3 +141,27 @@ export function titleFromItem(it: FamilyItem): Title {
     poster: it.poster ?? null, runtime: null, rating: 0, votes: 0, popularity: 0, providers: [], overview: "", seasons: null, status: null,
   };
 }
+
+/**
+ * "It's a match": family members (sharing their watchlist) who already have `key`.
+ * Returns [] when the title was already on my own list: adding it again isn't news.
+ */
+export function detectMatch(
+  key: TitleKey,
+  alreadyMine: boolean,
+  members: FamilyMember[],
+  items: FamilyItem[],
+): FamilyMember[] {
+  if (alreadyMine) return [];
+  return members.filter((m) => {
+    const list = watchlistOf(m, items);
+    return list !== "private" && list.some((it) => it.key === key);
+  });
+}
+
+/** "Anna wants…", "Anna and Bea want…", "Anna, Bea and Kid want… watch this too!" */
+export function matchMessage(names: string[]): string {
+  if (!names.length) return "";
+  const who = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return `🎉 ${who} ${names.length === 1 ? "wants" : "want"} to watch this too!`;
+}

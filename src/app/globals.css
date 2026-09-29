@@ -36,6 +36,8 @@ a {
 
 main.container {
   padding-top: max(12px, env(safe-area-inset-top));
+  /* Room for the fixed tab bar (the attribution footer used to provide this). */
+  padding-bottom: calc(90px + env(safe-area-inset-bottom));
   min-height: 60vh;
 }
 
@@ -432,14 +434,6 @@ input[type="search"] {
   font-size: 1.25rem;
 }
 
-.attribution {
-  font-size: 0.75rem;
-  color: var(--muted);
-  padding-bottom: 90px;
-  border-top: 1px solid #2a2a3a;
-  margin-top: 24px;
-}
-
 .match {
   display: flex;
   gap: 10px;
@@ -630,4 +624,141 @@ a.chip {
 
 .tonight > p {
   margin: 2px 4px 6px;
+}
+
+/* Me page: About & credits */
+.about-credits {
+  margin-top: 24px;
+  border-top: 1px solid #2a2a3a;
+  padding-top: 8px;
+}
+
+.about-credits > summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.credits {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+/* "It's a match" sheet: bottom sheet on phones, small centred dialog on wide screens. */
+.match-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40; /* above the tab bar (10) and the floating update button (11) */
+  background: rgba(0, 0, 0, 0.55);
+  animation: match-fade 0.2s ease-out;
+}
+
+.match-sheet {
+  --drag: 0px;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--panel);
+  border-radius: 18px 18px 0 0;
+  padding: 8px 18px calc(18px + env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45);
+  transform: translateY(var(--drag));
+  animation: match-slide-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  touch-action: none;
+}
+
+.sheet-handle {
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: #4a4a60;
+  margin: 2px auto 12px;
+}
+
+.match-body {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.match-poster .poster {
+  width: 72px;
+}
+
+.match-body h2 {
+  margin: 0 0 2px;
+  font-size: 1.2rem;
+}
+
+.match-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.match-message {
+  margin: 6px 0 0;
+  color: #d6cbb0;
+}
+
+.match-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.match-actions .btn {
+  flex: 1;
+  min-height: 48px;
+}
+
+@media (min-width: 640px) {
+  .match-sheet {
+    left: 50%;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    width: min(380px, calc(100vw - 32px));
+    border-radius: 16px;
+    padding: 18px;
+    transform: translate(-50%, -50%);
+    animation: match-pop 0.2s ease-out;
+    touch-action: auto;
+  }
+  .sheet-handle {
+    display: none;
+  }
+}
+
+@keyframes match-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes match-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%);
+  }
+}
+
+@keyframes match-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .match-backdrop,
+  .match-sheet {
+    animation: none;
+  }
+}
+
+/* Deep-linked card on Watchlist → Together */
+.highlighted > .card {
+  box-shadow: 0 0 0 2px var(--accent);
+  transition: box-shadow 0.4s ease;
 }
