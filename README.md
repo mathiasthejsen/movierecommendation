@@ -94,7 +94,8 @@ score   = base · (1 + 0.3·gem)                           gem = high TMDB ratin
 ```
 
 - Ratings are thumbs up/down or 1–5 stars. 3 stars counts as neutral, and 1–2 stars count as dislikes.
-- Results are filtered to 1980 or later and exclude anything you've already rated. Filters cover **Movies / TV / Both**, genre, year range, streaming provider (TMDB watch providers, JustWatch data) and hidden gems only. You can also hide titles on your watchlist.
+- Results are filtered to 1980 or later and exclude anything you've already rated. The collapsed **Filters** panel covers **Movies / TV / Both**, year range, streaming provider (TMDB watch providers, JustWatch data) and hidden gems only. You can also hide titles on your watchlist.
+- **Categories:** a chip bar above the feed, always visible. Chips are multi-select, and a title matches if it has *any* selected category; **All** clears the selection. Movie and TV genre IDs map onto one set of categories in [`src/lib/categories.ts`](src/lib/categories.ts); for example, "Action & Adventure" covers movie 28 + 12 and TV 10759, and TV "Kids" counts as Family. Only categories that occur in the current list are shown, most frequent first. The selection is saved with the other filters, and **Reset** clears it too.
 - **For you** has two tabs. **Based on my ratings** ranks only by similarity to what you rated; curators have no effect on it. **From curators** shows only curator picks, ordered by how well they fit your ratings, split into "Picks by followed curators" (`own: true`) and "Picks by other curators".
 - Rating a card on the feed doesn't reshuffle the list: the card stays in place, dimmed, and an **Update recommendations** button re-ranks when you're ready.
 - The **Picks** page lists every pick, with a curator multiselect (all selected by default; your selection is remembered).

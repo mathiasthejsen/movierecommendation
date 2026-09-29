@@ -1,3 +1,4 @@
+import { categoriesOf, genresToCategories, isCategory } from "./categories";
 import type { CuratorPick, Edge, MediaType, RatingKind, Source, Title, TitleKey } from "./types";
 
 export interface SourceWeights {
@@ -11,12 +12,30 @@ export type MediaFilter = MediaType | "both";
 
 export interface RankFilters {
   media?: MediaFilter;
-  genres?: number[];
+  /** Unified category IDs (see lib/categories.ts); a title matches if it has ANY of them. */
+  categories?: string[];
   yearFrom?: number;
   yearTo?: number;
   providers?: number[];
   gemsOnly?: boolean;
   curatedOnly?: boolean;
+}
+
+/**
+ * Normalise filters saved by older versions: `genres: [27]` (single genre-ID dropdown)
+ * becomes `categories: ["horror"]`; unknown categories and the retired `curatedOnly`
+ * flag (now the "From curators" tab) are dropped.
+ */
+export function migrateFilters(raw: unknown): RankFilters {
+  if (!raw || typeof raw !== "object") return {};
+  const { genres, curatedOnly: _retired, categories, ...rest } = raw as RankFilters & { genres?: unknown };
+  const cats = Array.isArray(categories) ? categories.filter(isCategory) : [];
+  if (Array.isArray(genres)) {
+    for (const c of genresToCategories(genres.filter((g): g is number => typeof g === "number"))) {
+      if (!cats.includes(c)) cats.push(c);
+    }
+  }
+  return cats.length ? { ...rest, categories: cats } : rest;
 }
 
 export interface RankOptions {
@@ -102,7 +121,10 @@ export function curatorScore(
 export function passesFilters(t: Title, filters: RankFilters | undefined, curated = false): boolean {
   if (!filters) return true;
   if (filters.media && filters.media !== "both" && t.type !== filters.media) return false;
-  if (filters.genres?.length && !t.genres.some((g) => filters.genres!.includes(g))) return false;
+  if (filters.categories?.length) {
+    const cats = categoriesOf(t.genres);
+    if (!filters.categories.some((c) => cats.has(c))) return false;
+  }
   if (filters.yearFrom && t.year < filters.yearFrom) return false;
   if (filters.yearTo && t.year > filters.yearTo) return false;
   if (filters.providers?.length && !t.providers.some((p) => filters.providers!.includes(p))) return false;
@@ -260,4 +282,15 @@ export function indexPicks(picks: Iterable<CuratorPick>): Map<TitleKey, CuratorP
     else map.set(p.key, [p]);
   }
   return map;
+}
+
+/**
+ * Apply a category selection to an already-ranked list (same rule as passesFilters).
+ * The feed ranks once without categories and filters here, so toggling a category chip
+ * is instant and never re-ranks the list under your finger.
+ */
+export function filterByCategories<T extends { title: Title }>(recs: T[], categories: readonly string[] | undefined): T[] {
+  if (!categories?.length) return recs;
+  const f: RankFilters = { categories: [...categories] };
+  return recs.filter((r) => passesFilters(r.title, f));
 }

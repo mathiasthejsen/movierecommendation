@@ -514,3 +514,49 @@ a.chip {
   text-decoration: none;
   color: var(--text);
 }
+
+/* Category chip bar: one horizontally scrollable row, always visible above the filters. */
+.cat-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 4px 2px 8px;
+  margin: 10px -14px 4px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.cat-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.chip.cat {
+  flex: 0 0 auto;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  white-space: nowrap;
+  scroll-snap-align: start;
+}
+
+.cat-count {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+.chip.on .cat-count {
+  color: #e8d9b0;
+}
+
+.chip:focus-visible,
+.btn:focus-visible,
+.segmented button:focus-visible,
+.more-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

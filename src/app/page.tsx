@@ -3,15 +3,19 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "@/components/AppProvider";
+import { CategoryBar } from "@/components/CategoryBar";
 import { SampleBanner } from "@/components/Chrome";
 import { Filters } from "@/components/Filters";
 import { TitleCard } from "@/components/TitleCard";
 import { useAllPicks } from "@/components/usePicks";
 import { loadNeighbors } from "@/lib/artifact";
+import { categoryLabel } from "@/lib/categories";
 import { ONBOARDING_TARGET } from "@/lib/config";
 import { isFollowed } from "@/lib/curators";
 import {
+  filterByCategories,
   indexPicks,
+  migrateFilters,
   preferenceWeight,
   rankRecommendations,
   tmdbFallbackEdges,
@@ -30,10 +34,19 @@ const fallbackCache = new Map<TitleKey, { edges: Edge[]; titles: Title[] } | nul
 
 function loadFilters(): RankFilters {
   try {
-    return JSON.parse(localStorage.getItem(FILTER_KEY) ?? "{}") as RankFilters;
+    const raw = localStorage.getItem(FILTER_KEY);
+    if (!raw) return {};
+    // Older versions saved a single genre ID (`genres: [27]`); convert it to categories and re-save.
+    const migrated = migrateFilters(JSON.parse(raw));
+    localStorage.setItem(FILTER_KEY, JSON.stringify(migrated));
+    return migrated;
   } catch {
     return {};
   }
+}
+
+function joinOr(labels: string[]): string {
+  return labels.length <= 1 ? (labels[0] ?? "") : `${labels.slice(0, -1).join(", ")} or ${labels[labels.length - 1]}`;
 }
 
 export default function FeedPage() {
@@ -64,6 +77,9 @@ export default function FeedPage() {
 
   const ratedKeys = useMemo(() => ratings.map((r) => r.key).sort(), [ratings]);
   const ratedSig = ratedKeys.join(",");
+  // Categories are applied after ranking (instant, no re-rank); everything else is a ranking filter.
+  const { categories: selectedCats = [], ...rankFilters } = filters;
+  const setCategories = (next: string[]) => updateFilters({ ...filters, categories: next });
 
   useEffect(() => {
     if (!ready || !ratedKeys.length) return;
@@ -122,18 +138,19 @@ export default function FeedPage() {
       minYear: meta?.minYear ?? 1980,
       exclude: hideWatchlist ? watchlist.map((w) => w.key) : [],
     };
-    const taste = rankRecommendations(weightsByKey, neighbors, merged, { ...base, filters: { ...filters, curatedOnly: false } });
+    const taste = rankRecommendations(weightsByKey, neighbors, merged, { ...base, filters: { ...rankFilters, curatedOnly: false } });
     const curators = rankRecommendations(weightsByKey, neighbors, merged, {
       ...base,
-      filters: { ...filters, curatedOnly: true },
+      filters: { ...rankFilters, curatedOnly: true },
       picks: indexPicks(picks),
       curatorWeights: weights,
     });
     return { taste, curators };
-  }, [ready, extraTitles, snapshots, catalog, ratings, neighbors, meta, filters, picks, weights, hideWatchlist, watchlist]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, extraTitles, snapshots, catalog, ratings, neighbors, meta, JSON.stringify(rankFilters), picks, weights, hideWatchlist, watchlist]);
 
   const initialLoaded = ready && (neighborsLoaded || ratedKeys.length === 0);
-  const filtersSig = JSON.stringify(filters);
+  const filtersSig = JSON.stringify(rankFilters);
   const currentList = (t: Tab, r: typeof recs) => (t === "ratings" ? r.taste : r.curators);
 
   // First pin, once the data is ready. After that the list never re-ranks by itself:
@@ -179,10 +196,14 @@ export default function FeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stale, activeTab]);
 
-  const tasteList = pinned?.taste ?? [];
-  const curatorList = pinned?.curators ?? [];
+  const tasteCandidates = pinned?.taste ?? [];
+  const curatorCandidates = pinned?.curators ?? [];
+  const tasteList = filterByCategories(tasteCandidates, selectedCats);
+  const curatorList = filterByCategories(curatorCandidates, selectedCats);
   const followed = curatorList.filter((r) => r.curators.some(isFollowed));
   const others = curatorList.filter((r) => !r.curators.some(isFollowed));
+  const tabCandidates = activeTab === "ratings" ? tasteCandidates : curatorCandidates;
+  const categoryEmpty = selectedCats.length > 0 && tabCandidates.length > 0 && (activeTab === "ratings" ? tasteList : curatorList).length === 0;
 
   if (error) return <p className="error">Couldn&apos;t load the data artifact: {error}</p>;
   if (!ready) return <p className="muted">Loading…</p>;
@@ -223,6 +244,16 @@ export default function FeedPage() {
           📌 From curators
         </button>
       </div>
+      {pinned ? (
+        <CategoryBar
+          titles={tabCandidates.map((r) => r.title)}
+          selected={selectedCats}
+          onChange={(next) => {
+            setCategories(next);
+            setShown(PAGE);
+          }}
+        />
+      ) : null}
       <Filters value={filters} onChange={updateFilters} />
       <label className="row small muted" style={{ marginBottom: 10 }}>
         <input type="checkbox" checked={hideWatchlist} onChange={(e) => setHideWatchlist(e.target.checked)} /> Hide titles on my
@@ -239,6 +270,24 @@ export default function FeedPage() {
 
       {!pinned ? (
         <p className="muted">Loading recommendations…</p>
+      ) : categoryEmpty ? (
+        <div className="notice" role="status">
+          <p>
+            <strong>No {joinOr(selectedCats.map(categoryLabel))} picks yet</strong>
+            {activeTab === "curators" ? " from your curators" : ""}.
+          </p>
+          <p className="small muted">
+            Rate a few more titles in these categories to widen your recommendations, or try another category.
+          </p>
+          <div className="row">
+            <button type="button" className="btn" onClick={() => setCategories([])}>
+              Clear categories
+            </button>
+            <Link className="btn secondary" href="/onboarding/">
+              Rate more titles
+            </Link>
+          </div>
+        </div>
       ) : activeTab === "ratings" ? (
         <section role="tabpanel" aria-label="Based on my ratings">
           <p className="muted small">Titles similar to what you rated (MovieLens, TMDB, Reddit). Curators don&apos;t affect this list.</p>

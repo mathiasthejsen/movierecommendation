@@ -9,7 +9,6 @@ const DECADES = [1980, 1990, 2000, 2010, 2020];
 export function Filters({ value, onChange }: { value: RankFilters; onChange: (f: RankFilters) => void }) {
   const { meta } = useApp();
   const set = (patch: Partial<RankFilters>) => onChange({ ...value, ...patch });
-  const genres = Object.entries(meta?.genres ?? {}).sort((a, b) => a[1].localeCompare(b[1]));
   const providers = Object.entries(meta?.providers ?? {}).slice(0, 12);
   const toggleProvider = (id: number) => {
     const cur = value.providers ?? [];
@@ -22,20 +21,6 @@ export function Filters({ value, onChange }: { value: RankFilters; onChange: (f:
         <MediaToggle value={value.media ?? "both"} onChange={(m) => set({ media: m as MediaFilter })} />
       </div>
       <div className="filter-row">
-        <label>
-          Genre{" "}
-          <select
-            value={value.genres?.[0] ?? ""}
-            onChange={(e) => set({ genres: e.target.value ? [Number(e.target.value)] : [] })}
-          >
-            <option value="">Any</option>
-            {genres.map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
         <label>
           From{" "}
           <select value={value.yearFrom ?? ""} onChange={(e) => set({ yearFrom: e.target.value ? Number(e.target.value) : undefined })}>
@@ -78,6 +63,7 @@ export function Filters({ value, onChange }: { value: RankFilters; onChange: (f:
         <button type="button" className={value.gemsOnly ? "chip on" : "chip"} aria-pressed={Boolean(value.gemsOnly)} onClick={() => set({ gemsOnly: !value.gemsOnly })}>
           💎 Hidden gems
         </button>
+        {/* Reset clears everything except Movies/TV, including the category chips above the feed. */}
         <button type="button" className="chip" onClick={() => onChange({ media: value.media })}>
           Reset
         </button>

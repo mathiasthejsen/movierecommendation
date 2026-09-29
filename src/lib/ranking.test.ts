@@ -117,7 +117,7 @@ describe("rankRecommendations", () => {
     expect(noBoost[0].title.key).toBe("movie:20");
   });
 
-  it("filters by genre, year, provider and gems", () => {
+  it("filters by category, year, provider and gems", () => {
     const cat = catalogOf(
       title(LIKED),
       title("movie:30", { genres: [27], year: 1990, providers: [8] }),
@@ -126,7 +126,8 @@ describe("rankRecommendations", () => {
     const neighbors = new Map<TitleKey, Edge[]>([[LIKED, [["movie:30", 50, 0, 0, 0], ["movie:31", 50, 0, 0, 0]]]]);
     const likes = new Map([[LIKED, 1]]);
     const keys = (f: object) => rankRecommendations(likes, neighbors, cat, { filters: f }).map((r) => r.title.key);
-    expect(keys({ genres: [27] })).toEqual(["movie:30"]);
+    expect(keys({ categories: ["horror"] })).toEqual(["movie:30"]);
+    expect(keys({ categories: ["horror", "comedy"] }).sort()).toEqual(["movie:30", "movie:31"]);
     expect(keys({ yearFrom: 2000 })).toEqual(["movie:31"]);
     expect(keys({ providers: [9] })).toEqual(["movie:31"]);
     expect(keys({ gemsOnly: true })).toEqual([]);
