@@ -28,3 +28,8 @@ begin;
     end;
   end $$;
 rollback;
+
+-- 5. Clients cannot touch pipeline triggers.
+select not has_table_privilege('authenticated', 'public.pipeline_runs', 'select')
+   and not has_table_privilege('anon', 'public.pipeline_runs', 'select')
+   and not has_function_privilege('authenticated', 'public.pipeline_reserve(uuid, integer)', 'execute') as pipeline_locked;

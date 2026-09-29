@@ -12,6 +12,7 @@ import { loadNeighbors } from "@/lib/artifact";
 import { categoryLabel } from "@/lib/categories";
 import { ONBOARDING_TARGET } from "@/lib/config";
 import { isFollowed } from "@/lib/curators";
+import { timeAgo } from "@/lib/pipeline";
 import {
   filterByCategories,
   indexPicks,
@@ -22,7 +23,7 @@ import {
   type RankFilters,
   type Recommendation,
 } from "@/lib/ranking";
-import { activeRatings, activeWatchlist, useStore } from "@/lib/store";
+import { activeRatings, activeWatchlist, syncNow, useStore } from "@/lib/store";
 import { proxyRecommendations } from "@/lib/tmdbProxy";
 import type { Edge, Title, TitleKey } from "@/lib/types";
 
@@ -166,11 +167,49 @@ export default function FeedPage() {
   }, [generation, filtersSig, hideWatchlist]);
   // Offer a re-rank once the new rating's neighbour data has loaded (no ratings left = nothing to load).
   const stale = Boolean(pinned && pinned.sig !== ratedSig && (loadedSig === ratedSig || ratedKeys.length === 0));
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [pendingRefresh, setPendingRefresh] = useState(false);
+  const [, setTick] = useState(0);
   const refresh = () => {
     setGeneration((g) => g + 1);
     setShown(PAGE);
+    setUpdatedAt(Date.now());
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  // ↻ Refresh: pull ratings/picks made on other devices (or by your partner's shared picks),
+  // wait for neighbour data of any newly rated titles, then re-rank.
+  const fullRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await syncNow();
+    } finally {
+      setPendingRefresh(true);
+    }
+  };
+  useEffect(() => {
+    if (!pendingRefresh) return;
+    const done = () => {
+      setPendingRefresh(false);
+      setRefreshing(false);
+      refresh();
+    };
+    if (ratedKeys.length === 0 || loadedSig === ratedSig || loadError) {
+      done();
+      return;
+    }
+    const safety = window.setTimeout(done, 15_000); // don't spin forever on a slow network
+    return () => window.clearTimeout(safety);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingRefresh, loadedSig, ratedSig, loadError]);
+  useEffect(() => {
+    if (pinned && updatedAt === null) setUpdatedAt(Date.now());
+  }, [pinned, updatedAt]);
+  useEffect(() => {
+    const t = window.setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
 
   const [tab, setTab] = useState<Tab | null>(null);
   // The default tab is decided once, when the list first appears, so a first rating doesn't flip it.
@@ -225,6 +264,21 @@ export default function FeedPage() {
     <>
       <h1>For you</h1>
       <SampleBanner />
+      <div className="feed-toolbar">
+        <button
+          type="button"
+          className="chip"
+          onClick={fullRefresh}
+          disabled={refreshing || !pinned}
+          aria-busy={refreshing}
+          title="Fetch your latest ratings and picks (including other devices) and re-rank"
+        >
+          {refreshing ? "↻ Refreshing…" : "↻ Refresh"}
+        </button>
+        <span className="small muted" aria-live="polite">
+          {refreshing ? "" : updatedAt ? `Updated ${timeAgo(new Date(updatedAt).toISOString())}` : ""}
+        </span>
+      </div>
       {needsOnboarding ? (
         <div className="notice">
           <p>

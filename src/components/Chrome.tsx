@@ -52,3 +52,17 @@ export function Attribution() {
     </footer>
   );
 }
+
+/** Shown app-wide once a newer weekly data build has been deployed. */
+export function NewDataBanner() {
+  const { newDataAvailable } = useApp();
+  if (!newDataAvailable) return null;
+  return (
+    <div className="banner new-data" role="status">
+      New data available.{" "}
+      <button type="button" className="chip" onClick={() => window.location.reload()}>
+        Reload
+      </button>
+    </div>
+  );
+}

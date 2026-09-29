@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { AppProvider } from "@/components/AppProvider";
-import { Attribution } from "@/components/Chrome";
+import { Attribution, NewDataBanner } from "@/components/Chrome";
 import { Nav } from "@/components/Nav";
 import { BASE_PATH } from "@/lib/config";
 import "./globals.css";
@@ -30,7 +30,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body>
         <AppProvider>
-          <main className="container">{children}</main>
+          <main className="container">
+            <NewDataBanner />
+            {children}
+          </main>
           <div className="container">
             <Attribution />
           </div>

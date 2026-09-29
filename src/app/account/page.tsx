@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp } from "@/components/AppProvider";
+import { DataUpdatePanel } from "@/components/DataUpdatePanel";
 import { Poster, TypeBadge } from "@/components/TitleCard";
 import { RatingControl } from "@/components/RatingControl";
 import { BASE_PATH, supabaseConfigured } from "@/lib/config";
@@ -111,6 +112,9 @@ export default function AccountPage() {
       ) : (
         <Login />
       )}
+
+      {/* Renders nothing unless signed in and the trigger-pipeline function is configured. */}
+      <DataUpdatePanel />
 
       <h2>Rating style</h2>
       <div className="segmented" role="radiogroup" aria-label="Rating style">

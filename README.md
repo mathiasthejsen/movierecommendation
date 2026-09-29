@@ -37,6 +37,7 @@ flowchart LR
 - [How the recommendations work](#how-the-recommendations-work)
 - [Getting API keys](#getting-api-keys)
 - [Supabase setup](#supabase-setup)
+- ["Update data now" (optional)](#update-data-now-optional)
 - [Add a family member](#add-a-family-member)
 - [Deploy to GitHub Pages on your personal account](#deploy-to-github-pages-on-your-personal-account)
 - [Alternative: keep the repo private with Cloudflare Pages](#alternative-keep-the-repo-private-with-cloudflare-pages)
@@ -98,6 +99,8 @@ score   = base · (1 + 0.3·gem)                           gem = high TMDB ratin
 - **Categories:** a chip bar above the feed, always visible. Chips are multi-select, and a title matches if it has *any* selected category; **All** clears the selection. Movie and TV genre IDs map onto one set of categories in [`src/lib/categories.ts`](src/lib/categories.ts); for example, "Action & Adventure" covers movie 28 + 12 and TV 10759, and TV "Kids" counts as Family. Only categories that occur in the current list are shown, most frequent first. The selection is saved with the other filters, and **Reset** clears it too.
 - **For you** has two tabs. **Based on my ratings** ranks only by similarity to what you rated; curators have no effect on it. **From curators** shows only curator picks, ordered by how well they fit your ratings, split into "Picks by followed curators" (`own: true`) and "Picks by other curators".
 - Rating a card on the feed doesn't reshuffle the list: the card stays in place, dimmed, and an **Update recommendations** button re-ranks when you're ready.
+- **↻ Refresh** (always visible on For you) pulls your latest ratings and picks from Supabase, so votes made on another device or picks your partner shared show up. It then loads neighbour data for any newly rated titles and re-ranks. Votes never need the data pipeline: ranking runs in the browser.
+- When a newer weekly data build is deployed, the app shows **New data available: Reload**. It checks when you return to the app and every 10 minutes.
 - The **Picks** page lists every pick, with a curator multiselect (all selected by default; your selection is remembered).
 - **More like this** on any card opens `/similar/?key=movie:603`, a list ranked only by similarity to that one title. Titles you've already rated are faded. If the title isn't in the weekly data, the page asks TMDB through the Edge Function instead.
 - **Hidden gems:** a high TMDB rating with relatively few votes. Series get their vote counts scaled up (TMDB series collect about 6× fewer votes than films), and titles from the last year don't count, because few votes there just means new.
@@ -166,6 +169,31 @@ Supabase's built-in email service is meant for testing: it **only sends to membe
 - **Simplest:** add them to your organization under **Organization settings → Team → Invite**, so the built-in email service will send to them. Then add them as an app user (see below).
 - **Better:** connect a free email provider under **Auth → SMTP settings** (for example [Brevo](https://www.brevo.com/), [Resend](https://resend.com/) or [ZeptoMail](https://www.zoho.com/zeptomail/)). This lifts both limits and unlocks **Auth → Email Templates**. There, add `Your code: {{ .Token }}` to the **Magic Link** template: an app installed to the iPhone Home Screen can't catch the login link, but you can type the code into **Me** instead.
 
+### "Update data now" (optional)
+
+Signed-in family members can start the data pipeline from **Me → Update data** instead of waiting for Monday. It refreshes films, series and curator picks and takes about 5–15 minutes. Votes don't need it, because they apply instantly. The button is hidden until you set this up.
+
+1. **Create a fine-grained personal access token** on the GitHub account that owns the repo: **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+   - *Resource owner:* your account. *Expiration:* up to a year; set a reminder to renew it.
+   - *Repository access:* **Only select repositories →** `movierecommendation`.
+   - *Repository permissions:* **Actions → Read and write**. Leave everything else at *No access*; *Metadata: read* is added automatically.
+2. **Store it as Supabase secrets.** It never goes to GitHub Actions or the browser:
+   ```bash
+   supabase secrets set GH_TOKEN=<the token> GH_OWNER=mathiasthejsen GH_REPO=movierecommendation
+   # optional: GH_WORKFLOW=deploy.yml GH_REF=main
+   ```
+3. **Apply the table and deploy the function.** The table (`pipeline_runs` plus `pipeline_reserve()`) is part of `supabase/schema.sql`, which is safe to re-run:
+   ```bash
+   supabase db query --linked -f supabase/schema.sql
+   supabase functions deploy trigger-pipeline --no-verify-jwt --use-api
+   ```
+
+How it behaves:
+- It requires a signed-in user, like the TMDB proxy, and allows CORS only from `ALLOWED_ORIGINS`.
+- It allows **one trigger per hour for the whole family**. Triggers are recorded in `pipeline_runs`, which only the service role can read or write; failed dispatches don't count. A second tap within the hour gets *"You can start another update in N min"*.
+- It won't start a run while one is already queued or in progress.
+- The panel shows *Last data update: 2 days ago · Running… / Done*. It checks every 30 seconds while a run is active, stops after 20 minutes, and then shows the **Reload** prompt once the new data is deployed.
+- To turn it off, remove the `GH_TOKEN` secret (`supabase secrets unset GH_TOKEN`). The button disappears.
 ## Add a family member
 
 1. Make sure Supabase can email them (see *Login emails on the free plan* above).

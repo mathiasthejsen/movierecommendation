@@ -147,3 +147,49 @@ as $$ select now() $$;
 
 revoke all on function public.keepalive() from public;
 grant execute on function public.keepalive() to anon, authenticated;
+
+-- ---------------------------------------------------------------------------------
+-- "Update data now": on-demand pipeline triggers (trigger-pipeline Edge Function).
+-- At most one per hour for the whole family. Only the service role can read or write.
+create table if not exists public.pipeline_runs (
+  id            bigint generated always as identity primary key,
+  triggered_by  uuid references auth.users (id) on delete set null,
+  created_at    timestamptz not null default now(),
+  github_status text not null default 'pending' check (github_status in ('pending', 'dispatched', 'failed'))
+);
+create index if not exists pipeline_runs_created_at_idx on public.pipeline_runs (created_at desc);
+alter table public.pipeline_runs enable row level security;
+-- No policies: clients can't read or write it.
+revoke all on public.pipeline_runs from anon, authenticated;
+
+-- Atomically re-check the family-wide cooldown and record a pending trigger.
+-- Failed dispatches don't count toward the cooldown.
+create or replace function public.pipeline_reserve(p_user uuid, p_cooldown_seconds integer)
+returns table (ok boolean, retry_after_seconds integer, run_id bigint)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  last_at timestamptz;
+  new_id  bigint;
+begin
+  perform pg_advisory_xact_lock(hashtext('public.pipeline_reserve'));
+  select r.created_at into last_at
+    from public.pipeline_runs r
+   where r.github_status in ('pending', 'dispatched')
+   order by r.created_at desc
+   limit 1;
+  if last_at is not null and last_at > now() - make_interval(secs => p_cooldown_seconds) then
+    return query select false,
+      greatest(1, ceil(extract(epoch from (last_at + make_interval(secs => p_cooldown_seconds) - now())))::integer),
+      null::bigint;
+    return;
+  end if;
+  insert into public.pipeline_runs (triggered_by) values (p_user) returning id into new_id;
+  return query select true, 0, new_id;
+end;
+$$;
+
+revoke all on function public.pipeline_reserve(uuid, integer) from public, anon, authenticated;
+grant execute on function public.pipeline_reserve(uuid, integer) to service_role;

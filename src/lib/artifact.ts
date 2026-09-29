@@ -116,3 +116,19 @@ export async function loadNeighbors(keys: Iterable<TitleKey>): Promise<Map<Title
   }
   return out;
 }
+
+/**
+ * Has a newer data artifact been deployed? Fetches meta.json fresh (query string busts the
+ * Pages CDN; the service worker passes query-string data requests straight to the network)
+ * and compares its build time with the one this page loaded.
+ */
+export async function isNewDataAvailable(loadedGeneratedAt: string): Promise<boolean> {
+  try {
+    const res = await fetch(asset(`/data/meta.json?check=${Date.now()}`), { cache: "no-store" });
+    if (!res.ok) return false;
+    const fresh = (await res.json()) as Meta;
+    return Boolean(fresh.generatedAt && fresh.generatedAt !== loadedGeneratedAt);
+  } catch {
+    return false;
+  }
+}

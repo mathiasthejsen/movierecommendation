@@ -2,7 +2,7 @@
  * Scope and cache paths derive from the registration scope, so it works under any base path
  * (e.g. https://<user>.github.io/movie-recommender/).
  */
-const VERSION = "v4";
+const VERSION = "v5";
 const SCOPE = new URL(self.registration.scope);
 const BASE = SCOPE.pathname; // ends with "/"
 const SHELL = `shell-${VERSION}`;
@@ -94,6 +94,8 @@ self.addEventListener("fetch", (event) => {
   } else if (url.pathname.startsWith(`${BASE}_next/static/`)) {
     event.respondWith(cacheFirst(request, STATIC));
   } else if (url.pathname.startsWith(`${BASE}data/`)) {
+    // Freshness checks (meta.json?check=…) go straight to the network and aren't cached.
+    if (url.search) return;
     // Network-first so meta, catalog and neighbour shards always come from the same weekly build;
     // the cache is only used offline.
     event.respondWith(networkFirst(request, DATA, false));
