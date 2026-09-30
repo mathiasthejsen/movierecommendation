@@ -149,33 +149,33 @@ export function TitleCard({
             ) : null}
           </>
         ) : null}
-        <div className="actions">
-          <RatingControl title={title} />
-          {watchMode === "addOnly" ? (
-            inWatchlist ? (
-              <span className="badge also-yours">✓ Also on yours</span>
-            ) : (
-              <button type="button" className="chip" onClick={() => watchlist.add(title.key, title)}>
-                + Add to mine
-              </button>
-            )
+      </div>
+      <div className="actions">
+        <RatingControl title={title} />
+        {watchMode === "addOnly" ? (
+          inWatchlist ? (
+            <span className="badge also-yours">✓ Also on yours</span>
           ) : (
-            <button
-              type="button"
-              className={inWatchlist ? "chip on" : "chip"}
-              aria-pressed={inWatchlist}
-              onClick={() => watchlist.toggle(title.key, title)}
-            >
-              {inWatchlist ? "✓ Watchlist" : "+ Watchlist"}
+            <button type="button" className="chip" onClick={() => watchlist.add(title.key, title)}>
+              + Add to mine
             </button>
-          )}
-          <Link className="chip like-this" href={`/similar/?key=${encodeURIComponent(title.key)}`}>
-            More like this
-          </Link>
-          <a className="link" href={tmdbUrl(title.key)} target="_blank" rel="noreferrer">
-            TMDB ↗
-          </a>
-        </div>
+          )
+        ) : (
+          <button
+            type="button"
+            className={inWatchlist ? "chip on" : "chip"}
+            aria-pressed={inWatchlist}
+            onClick={() => watchlist.toggle(title.key, title)}
+          >
+            {inWatchlist ? "✓ Watchlist" : "+ Watchlist"}
+          </button>
+        )}
+        <Link className="chip like-this" href={`/similar/?key=${encodeURIComponent(title.key)}`}>
+          More like this
+        </Link>
+        <a className="link" href={tmdbUrl(title.key)} target="_blank" rel="noreferrer">
+          TMDB ↗
+        </a>
       </div>
     </article>
   );

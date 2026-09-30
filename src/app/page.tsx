@@ -311,7 +311,7 @@ export default function FeedPage() {
         />
       ) : null}
       <Filters value={filters} onChange={updateFilters} />
-      <label className="row small muted" style={{ marginBottom: 10 }}>
+      <label className="row small muted" style={{ marginBottom: "var(--space-3)" }}>
         <input type="checkbox" checked={hideWatchlist} onChange={(e) => setHideWatchlist(e.target.checked)} /> Hide titles on my
         watchlist
       </label>

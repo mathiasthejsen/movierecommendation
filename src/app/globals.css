@@ -8,6 +8,22 @@
   --up: #3ecf8e;
   --down: #ef5b5b;
   --radius: 12px;
+  /* Spacing scale: use these instead of ad-hoc pixel values. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --gutter: var(--space-4); /* page side padding; everything lines up on this edge */
+  --container: 720px;
+  /* One height for every standalone control (chips, buttons, inputs, selects, segmented). */
+  --control-h: 44px;
+  --control-h-sm: 40px; /* compact controls inside cards/tiles */
+  --control-radius: 10px;
+  --pill: 999px;
+  --font-sm: 0.85rem;
+  --font-xs: 0.75rem;
+  --tabbar-h: 58px;
   color-scheme: dark;
 }
 
@@ -761,4 +777,360 @@ a.chip {
 .highlighted > .card {
   box-shadow: 0 0 0 2px var(--accent);
   transition: box-shadow 0.4s ease;
+}
+
+/* =====================================================================================
+   Consistency layer (UI audit). Keeps the look; aligns everything on the same gutter,
+   one spacing scale and one control height. Later rules intentionally override the
+   scattered earlier ones.
+   ===================================================================================== */
+
+/* --- Page frame ------------------------------------------------------------------- */
+.container {
+  max-width: var(--container);
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+main.container {
+  padding-bottom: calc(var(--tabbar-h) + var(--space-5) + env(safe-area-inset-bottom));
+}
+
+h1 {
+  margin: var(--space-2) 0 var(--space-3);
+  line-height: 1.2;
+}
+
+h2 {
+  margin: var(--space-5) 0 var(--space-2);
+  line-height: 1.25;
+}
+
+/* Paragraphs inside cards/stacks: spacing comes from the container's gap, not browser margins. */
+.stack > p,
+.notice > p,
+.stack > label {
+  margin: 0;
+}
+
+.notice {
+  margin: 0 0 var(--space-3);
+}
+
+.notice:not(.stack) > * + * {
+  margin-top: var(--space-2);
+}
+
+.banner {
+  margin: 0 0 var(--space-3);
+}
+
+/* Short explanatory text at the top of a tab panel. */
+[role="tabpanel"] > p.small:first-child {
+  margin: 0 0 var(--space-3);
+}
+
+/* --- Controls: one height, one baseline ---------------------------------------------- */
+.chip,
+.btn,
+input[type="text"],
+input[type="email"],
+input[type="search"],
+select {
+  min-height: var(--control-h);
+  line-height: 1.2;
+}
+
+.chip,
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  vertical-align: middle;
+  text-decoration: none; /* links styled as buttons (e.g. onboarding "Done") */
+}
+
+.chip {
+  padding: 0 var(--space-3);
+}
+
+.btn {
+  padding: 0 var(--space-4);
+  border-radius: var(--control-radius);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="search"],
+select {
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border-radius: var(--control-radius);
+}
+
+.chips {
+  gap: var(--space-2);
+}
+
+.row {
+  gap: var(--space-2);
+}
+
+/* Checkboxes line up with the page edge and match the accent colour. */
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+label.row {
+  min-height: var(--control-h);
+}
+
+/* Segmented controls (Movies/TV/Both, feed tabs, watchlist tabs, rating style). */
+.segmented {
+  padding: 3px;
+  gap: 2px;
+  align-items: stretch;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.segmented button {
+  min-height: calc(var(--control-h) - 6px);
+  padding: 0 var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+/* Inside grid stacks, don't stretch segmented controls to full width. */
+.stack > .segmented {
+  justify-self: start;
+}
+
+/* Page-level tabs: full width, never wrap to two lines (360px phones), long names ellipsize. */
+.segmented.tabs {
+  display: flex;
+  width: 100%;
+  margin: 0 0 var(--space-3);
+}
+
+.segmented.tabs button {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: clamp(0.8rem, 3.6vw, 1rem);
+}
+
+/* Focus ring: same accent ring everywhere (inputs used the browser's black ring). */
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+.tab:focus-visible,
+.card-poster:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input[type="text"]:focus-visible,
+input[type="email"]:focus-visible,
+input[type="search"]:focus-visible,
+select:focus-visible {
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+/* --- Feed header --------------------------------------------------------------------- */
+.feed-toolbar {
+  margin: 0 0 var(--space-3);
+}
+
+/* Category chips: bleed to the screen edge while scrolling, but the first chip starts on the gutter. */
+.cat-bar {
+  gap: var(--space-2);
+  margin: 0 calc(-1 * var(--gutter)) var(--space-2);
+  padding: var(--space-1) var(--gutter);
+  scroll-padding-inline: var(--gutter);
+}
+
+.chip.cat {
+  padding: 0 var(--space-3);
+}
+
+/* Disclosure panels (Filters, Add pick, Curators) and About & credits share one header style. */
+.filters {
+  padding: 0 var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+
+.filters > summary,
+.about-credits > summary {
+  display: list-item;
+  min-height: auto;
+  padding: 10px 0;
+  line-height: 24px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.filters[open] {
+  padding-bottom: var(--space-3);
+}
+
+.filter-row {
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+.filter-row:last-child {
+  margin-bottom: 0;
+}
+
+.filter-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* --- Cards ----------------------------------------------------------------------------- */
+.list {
+  gap: var(--space-3);
+}
+
+.card {
+  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  column-gap: var(--space-3);
+  row-gap: var(--space-2);
+  padding: var(--space-3);
+  align-items: start;
+}
+
+.card-poster {
+  grid-row: 1 / span 2;
+}
+
+.card-body {
+  min-width: 0; /* let long titles/provider lists wrap instead of widening the card */
+}
+
+.card-body h3 {
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* The action row is its own grid row: under the text on wide screens... */
+.card > .actions {
+  grid-column: 2;
+  margin: 0;
+  gap: var(--space-2);
+}
+
+/* ...and full card width on phones, so buttons wrap evenly instead of squeezing beside the poster. */
+@media (max-width: 559px) {
+  .card-poster {
+    grid-row: 1;
+  }
+  .card > .actions {
+    grid-column: 1 / -1;
+  }
+}
+
+.actions .chip,
+.tile .rating .chip,
+.match .chip {
+  min-height: var(--control-h-sm);
+}
+
+.actions .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h-sm);
+}
+
+.rating {
+  gap: var(--space-1);
+}
+
+.tile {
+  padding: var(--space-2);
+  gap: var(--space-2);
+}
+
+.grid {
+  gap: var(--space-3);
+}
+
+.match {
+  gap: var(--space-3);
+  padding: var(--space-2);
+}
+
+/* --- Tab bar ----------------------------------------------------------------------------- */
+.tabbar {
+  justify-content: stretch;
+  padding: var(--space-1) max(var(--space-1), calc((100vw - var(--container)) / 2)) max(var(--space-1), env(safe-area-inset-bottom));
+}
+
+.tab {
+  flex: 1 1 0;
+  justify-content: center;
+  gap: 2px;
+  min-height: 48px;
+  padding: var(--space-1) 0;
+  line-height: 1.1;
+  border-radius: var(--control-radius);
+}
+
+.tab span:first-child {
+  line-height: 1;
+}
+
+/* Floating "Update recommendations" sits just above the tab bar. */
+.refresh-bar {
+  bottom: calc(var(--tabbar-h) + var(--space-3) + env(safe-area-inset-bottom));
+}
+
+/* --- Me page ----------------------------------------------------------------------------- */
+.about-credits {
+  margin-top: var(--space-5);
+  padding-top: 0;
+}
+
+.credits > p {
+  margin: 0 0 var(--space-2);
+}
+
+/* --- Match sheet ------------------------------------------------------------------------- */
+.match-sheet {
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+@media (min-width: 640px) {
+  .match-sheet {
+    padding: var(--space-4);
+  }
+}
+
+.match-actions {
+  gap: var(--space-2);
+}
+
+.actions .badge.also-yours {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h-sm);
+  margin-left: 0;
+  padding: 0 var(--space-3);
+  border-radius: var(--pill);
 }
