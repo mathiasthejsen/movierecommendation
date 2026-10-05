@@ -1,11 +1,12 @@
 # Reel Picks: a personal movie and TV recommender
 
-Reel Picks is a small PWA for two people (you and your family) that suggests films **and** series released in 1980 or later. It works like a Reddit thread ("if you liked *Donnie Darko* and *The Silence of the Lambs*, try…"). It blends four signals:
+Reel Picks is a small PWA for two people (you and your family) that suggests films **and** series released in 1980 or later. It works like a Reddit thread ("if you liked *Donnie Darko* and *The Silence of the Lambs*, try…"). It blends five signals:
 
 1. **MovieLens ml-32m** item-item similarity: rating co-occurrence plus tags, films only.
 2. **Reddit** "X → Y" edges mined from r/MovieSuggestions, r/movies, r/televisionsuggestions and r/NetflixBestOf through the official API, weighted by upvotes. Edges can cross media types (a film you liked can lead to a show).
-3. **TMDB** recommendations and similar titles (plus optional **Trakt** related shows) for series and for new releases that MovieLens doesn't have.
-4. **Curator picks** from the people you follow: the Letterboxd RSS feeds of the curators in [`config/curators.json`](config/curators.json), plus posts you share into the app from Instagram or TikTok.
+3. **TMDB** recommendations and similar titles (plus optional **Trakt** related shows) for every series in the catalogue and for new releases that MovieLens doesn't have.
+4. **Content bridge**: TMDB keywords, categories, original language and decade (sparse TF-IDF, cosine similarity) link each film to its closest series and back, plus series to series. Links need two shared keywords and a shared category; reality/talk and kids' shows only link to their own kind, and link targets need a decent TMDB rating and vote count. This is what lets someone who has only rated films get TV picks ("Similar themes to *Heat* · keywords").
+5. **Curator picks** from the people you follow: the Letterboxd RSS feeds of the curators in [`config/curators.json`](config/curators.json), plus posts you share into the app from Instagram or TikTok.
 
 Every recommendation shows its reason, for example
 `Because you liked Donnie Darko and Primer · Reddit + MovieLens · Picked by @sortedcinema · Hidden gem`.
@@ -83,13 +84,14 @@ On Windows PowerShell, set the variable with `$env:NEXT_PUBLIC_BASE_PATH='/movie
 |---|---|
 | `meta.json` | Version, counts, genre and provider names, watch region, attribution |
 | `catalog.json` | Title metadata as a column list plus rows: key, title, year, genres, poster path, runtime, TMDB rating and votes, popularity, streaming-provider ids, short overview, seasons, status (ended/ongoing) |
-| `neighbors/<n>.json` | Sharded neighbour lists `[key, movielens, reddit, tmdb, trakt]` with scores from 0 to 100. The app **lazy-loads only the shards of titles you've rated** (shard = `(id*2 + isTv) % shards`). |
+| `neighbors/<n>.json` | Sharded neighbour lists `[key, movielens, reddit, tmdb, trakt, content]` with scores from 0 to 100 (older artifacts have no `content` score; the app treats it as 0). The app **lazy-loads only the shards of titles you've rated** (shard = `(id*2 + isTv) % shards`). |
 | `curators.json` | Public curator config plus accumulated curator picks (keys, rating, link only) |
 
 **Ranking** runs client-side in [`src/lib/ranking.ts`](src/lib/ranking.ts):
 
 ```
 s(l→c)  = Σ_source weight·score/100   (×1.15 when ≥ 2 sources agree)
+          weights: MovieLens 1 · Reddit 0.9 · TMDB 0.5 · Trakt 0.45 · content 0.5
 sim(c)  = Σ_liked w·s(l→c)  −  0.8 · Σ_disliked |w|·s(d→c)
 base(c) = sim⁺·(1 + 0.4·cur) + 0.12·cur − dislikes      cur = curator score (own curators 1.0, discovered 0.6, capped at 1.5)
 score   = base · (1 + 0.3·gem)                           gem = high TMDB rating × low vote count
@@ -105,6 +107,7 @@ score   = base · (1 + 0.3·gem)                           gem = high TMDB ratin
 - The **Picks** page lists every pick, with a curator multiselect (all selected by default; your selection is remembered).
 - **More like this** on any card opens `/similar/?key=movie:603`, a list ranked only by similarity to that one title. Titles you've already rated are faded. If the title isn't in the daily data, the page asks TMDB through the Edge Function instead.
 - **Hidden gems:** a high TMDB rating with relatively few votes. Series get their vote counts scaled up (TMDB series collect about 6× fewer votes than films), and titles from the last year don't count, because few votes there just means new.
+- **Films and series together:** in **Both** mode, at least one series appears in every 5 slots *when* a series reaches a minimum score (0.2, about one solid link from a title you liked; `diversifyMedia`); badly matching series are never forced in. With the **TV** filter and hardly any rated shows, the feed shows **Rate a few shows to improve TV picks** with well-known series to rate inline.
 - If you rate something the artifact doesn't cover (found through live search), the app asks the Edge Function for TMDB recommendations and similar titles as a fallback.
 
 **Title extraction** runs in [`pipeline/extract.py`](pipeline/extract.py), with a TypeScript port in [`src/lib/extract.ts`](src/lib/extract.ts) for the Share Target. It finds candidates in bold and italic text, list items (including inline `1. X 2. Y` lists), `Title (Year)` mentions, `(TV series)` and `(2008–2013)` markers for series, and "Movies/Shows like X" seed phrases. It strips hashtags, @mentions and emoji. Every candidate is then **validated against TMDB search** (`/search/movie`, `/search/tv`, `/search/multi`). An optional LLM hook is available: set `LLM_EXTRACTOR=package.module:function`, and the function receives text and returns titles.
@@ -292,7 +295,7 @@ python -m pipeline.download        # ~240 MB ml-32m into data/raw/ (git-ignored)
 python -m pipeline.build           # writes public/data/
 ```
 
-Optional sources are skipped with a warning when their keys are missing. TMDB responses are cached in `data/cache/`, which is git-ignored and cached in Actions. The first full run makes several thousand TMDB requests; later daily runs mostly hit the cache. Useful settings are `WATCH_REGION`, `MIN_RATINGS` (default 300), `TOP_K` (50), `MAX_MOVIES` (9000), `TMDB_TV_PAGES` and `MAX_ARTIFACT_MB`. To use the full MovieLens **tag genome**, download ml-25m and set `GENOME_DIR` to the folder containing `genome-scores.csv`. Without it, the pipeline builds TF-IDF tag vectors from ml-32m `tags.csv`, because ml-32m itself ships no genome.
+Optional sources are skipped with a warning when their keys are missing. TMDB responses are cached in `data/cache/`, which is git-ignored and cached in Actions. The first full run makes several thousand TMDB requests; later daily runs mostly hit the cache. Useful settings are `CONTENT_K` (15 links per title and direction), `CONTENT_MIN_SIM` (0.1), `CONTENT_MIN_SHARED` (2 shared keywords), `CONTENT_MIN_VOTES_TV`/`_MOVIE` (150/300) and `CONTENT_MIN_RATING` (6.5) for link targets, `TV_FETCH_BUDGET`, `TRAKT_BUDGET`, `WATCH_REGION`, `MIN_RATINGS` (default 300), `TOP_K` (50), `MAX_MOVIES` (9000), `TMDB_TV_PAGES` and `MAX_ARTIFACT_MB`. To use the full MovieLens **tag genome**, download ml-25m and set `GENOME_DIR` to the folder containing `genome-scores.csv`. Without it, the pipeline builds TF-IDF tag vectors from ml-32m `tags.csv`, because ml-32m itself ships no genome.
 
 ### Daily schedule and caching
 
@@ -305,6 +308,9 @@ The workflow runs **every day at 04:17 UTC** (`cron: "17 4 * * *"`). Each run is
 | Reddit edges | daily (if configured) | |
 | Letterboxd curator RSS | at most once a day per curator, sequential with a 2 s delay | `curators.json → lastFetched` |
 | Trakt related shows | every 13 days per show | |
+| TMDB keywords (content bridge) | with the details, every 3–5 days per title (`append_to_response=keywords`, no extra request) | |
+| Series recommendations/similar for **all** series | every 3–5 days per series; at most `TV_FETCH_BUDGET` (5000) uncached requests per run, most-voted series first | the rest is picked up by the next daily run |
+| Trakt related shows for all series | at most `TRAKT_BUDGET` (1500) uncached requests per run | |
 | **MovieLens similarity** | **weekly** (`ML_REFRESH_DAYS`, default 7) or when the URL/parameters change | the derived neighbours are cached in `data/cache/movielens/`; the ~240 MB ml-32m zip is only restored (from its own Actions cache, constant key) on those runs |
 
 `python -m pipeline.mlcache status` reports whether the next run recomputes MovieLens (`rebuild=`) and needs the raw download (`need_raw=`); the workflow uses it to skip the download. Expected duration on GitHub's runners: **~10–15 min** for a normal daily pipeline job (+~5 min on the weekly MovieLens recompute, +~10 min if Reddit is configured), then ~4 min to build and deploy the site. A cold first run (empty caches) takes ~35–40 min. The job timeout is 120 min. Publishing force-pushes a single commit to the `data` branch, so its history doesn't grow.

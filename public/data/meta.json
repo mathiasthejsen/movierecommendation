@@ -1,6 +1,6 @@
 {
  "version": 2,
- "generatedAt": "2026-09-28T10:54:41+00:00",
+ "generatedAt": "2026-10-05T09:38:50+00:00",
  "sample": true,
  "region": "US",
  "minYear": 1980,
@@ -14,7 +14,9 @@
   "movielensEdges": 4959,
   "redditEdges": 134,
   "tmdbEdges": 280,
-  "traktEdges": 0
+  "traktEdges": 0,
+  "contentEdges": 96,
+  "tvWithNeighbors": 28
  },
  "genres": {
   "12": "Adventure",
@@ -136,6 +138,10 @@
    "name": "The Roku Channel",
    "logo": "/b7uhrYJtAe7b1ieJGg705vTbwrX.png"
   },
+  "635": {
+   "name": "AMC+ Roku Premium Channel",
+   "logo": "/xMyod7PSWlER7Q8FLDqVckKeyyB.png"
+  },
   "526": {
    "name": "AMC+",
    "logo": "/wsCUflcmL4dCkzBUaGP8cj1cTkh.png"
@@ -163,10 +169,6 @@
   "332": {
    "name": "Fandango at Home Free",
    "logo": "/wpOt6x0dRxTrIzuBosto4LGd7E9.png"
-  },
-  "258": {
-   "name": "Criterion Channel",
-   "logo": "/32XVilXkVbrwV96O3N5i0rtuyd6.png"
   },
   "209": {
    "name": "PBS",
@@ -248,10 +250,6 @@
    "name": "YouTube Free",
    "logo": "/gqaJWT5oFiJyVDojVLYRSFPbhQ1.png"
   },
-  "361": {
-   "name": "TCM",
-   "logo": "/7LA3wg2A01nyV3PCLN01WNOVhcT.png"
-  },
   "363": {
    "name": "TNT",
    "logo": "/6cgMswJ1yXtJLP1uJhM476h2WTH.png"
@@ -284,10 +282,6 @@
    "name": "Netflix Standard with Ads",
    "logo": "/eGUwOOIxcazwEBxqJpSN5sWEu6V.png"
   },
-  "1866": {
-   "name": "ViX Premium Amazon Channel",
-   "logo": "/dZn7SR1rarhMVKnO0OXCAvMjbcv.png"
-  },
   "1957": {
    "name": "Cineverse",
    "logo": "/rqCIpmrCBpnL6oliak6E1mrq5DD.png"
@@ -295,6 +289,10 @@
   "2358": {
    "name": "Lionsgate+ Amazon Channels",
    "logo": "/1356slxu4QrHOMrEVDKHJXRo5sW.png"
+  },
+  "43": {
+   "name": "Starz",
+   "logo": "/h25xjouKmiSmFiiqw0aDXbxGZo7.png"
   },
   "1963": {
    "name": "Xumo Play",
@@ -335,6 +333,10 @@
   "2419": {
    "name": "Monsters and Nightmares Amazon Channel",
    "logo": "/pcSzaYgwXvQaoPYqtrPXu6nrEdW.png"
+  },
+  "2445": {
+   "name": "MovieSphere+ Amazon Channel",
+   "logo": "/9GQLqBo5obK0r3nhZl24BadRKPq.png"
   },
   "600": {
    "name": "Shout! Factory Amazon Channel",
@@ -386,6 +388,7 @@
   "justwatch": "Streaming availability data provided by JustWatch via TMDB.",
   "movielens": "Film similarity derived from the MovieLens ml-32m dataset (GroupLens, University of Minnesota). Non-commercial use only.",
   "reddit": "Recommendation edges derived from public Reddit threads via the official API. No Reddit text is stored.",
+  "trakt": "Related-show data from Trakt (trakt.tv).",
   "letterboxd": "Curator picks from public Letterboxd RSS feeds (IDs, ratings and links only)."
  }
 }

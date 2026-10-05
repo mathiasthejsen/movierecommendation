@@ -101,7 +101,7 @@ function Similar() {
         }}
       />
       <p className="muted small">
-        Ranked only by similarity to this title (MovieLens, TMDB, Reddit). Titles you&apos;ve already rated are faded.
+        Ranked only by similarity to this title (MovieLens, TMDB, Reddit, Trakt, keywords). Titles you&apos;ve already rated are faded.
       </p>
       {edges === null ? (
         <p className="muted">Finding similar titles…</p>

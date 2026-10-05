@@ -6,6 +6,7 @@ import { useApp } from "@/components/AppProvider";
 import { CategoryBar } from "@/components/CategoryBar";
 import { SampleBanner } from "@/components/Chrome";
 import { Filters } from "@/components/Filters";
+import { TV_NUDGE_RATED, TvRatingNudge } from "@/components/RatingTile";
 import { TitleCard } from "@/components/TitleCard";
 import { useAllPicks } from "@/components/usePicks";
 import { loadNeighbors } from "@/lib/artifact";
@@ -17,6 +18,7 @@ import { refreshNotifications } from "@/lib/notifications";
 import { timeAgo } from "@/lib/pipeline";
 import { loadHideWatchlist, saveHideWatchlist, withoutHidden } from "@/lib/prefs";
 import {
+  diversifyMedia,
   filterByCategories,
   indexPicks,
   migrateFilters,
@@ -252,7 +254,11 @@ export default function FeedPage() {
   // Order: ranked candidates -> hide watchlist -> category chips. Chip counts follow the hide setting.
   const tasteCandidates = withoutHidden(pinned?.taste ?? [], hidden);
   const curatorCandidates = withoutHidden(pinned?.curators ?? [], hidden);
-  const tasteList = filterByCategories(tasteCandidates, selectedCats);
+  // "Both": let well-matching series surface between the (more strongly linked) films. Applied last,
+  // on exactly what is shown (after hiding watchlist titles and the category chips).
+  const mixMedia = !rankFilters.media || rankFilters.media === "both";
+  const tasteFiltered = filterByCategories(tasteCandidates, selectedCats);
+  const tasteList = mixMedia ? diversifyMedia(tasteFiltered) : tasteFiltered;
   const curatorList = filterByCategories(curatorCandidates, selectedCats);
   const followed = curatorList.filter((r) => r.curators.some(isFollowed));
   const others = curatorList.filter((r) => !r.curators.some(isFollowed));
@@ -268,6 +274,9 @@ export default function FeedPage() {
   if (!ready) return <p className="muted">Loading…</p>;
 
   const needsOnboarding = ratings.length < 5;
+  const ratedTv = ratings.filter((r) => r.key.startsWith("tv:")).length;
+  // TV filter with few candidates and hardly any rated shows: offer shows to rate inline.
+  const showTvNudge = activeTab === "ratings" && rankFilters.media === "tv" && ratedTv < TV_NUDGE_RATED && tasteList.length < 12;
   const card = (r: Recommendation) => (
     <TitleCard key={r.title.key} title={getTitle(r.title.key) ?? r.title} reason={r.reason} badges={r.gem ? ["💎 Gem"] : undefined} dimWhenRated />
   );
@@ -381,7 +390,10 @@ export default function FeedPage() {
         </div>
       ) : activeTab === "ratings" ? (
         <section role="tabpanel" aria-label="Based on my ratings">
-          <p className="muted small">Titles similar to what you rated (MovieLens, TMDB, Reddit). Curators don&apos;t affect this list.</p>
+          <p className="muted small">
+            Titles similar to what you rated (MovieLens, TMDB, Reddit, Trakt, keywords). Curators don&apos;t affect this list.
+          </p>
+          {showTvNudge ? <TvRatingNudge /> : null}
           {tasteList.length === 0 ? (
             <p className="muted">
               {ratings.length

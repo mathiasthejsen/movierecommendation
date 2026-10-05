@@ -53,7 +53,7 @@ def test_merge_edges_normalises_and_filters():
     assert all(0 <= v <= 100 for e in out["movie:1"] for v in e[1:])
     assert by_key["movie:3"][2] == 100  # strongest reddit edge normalises to 100
     assert "tv:10" in by_key
-    assert out["tv:10"] == [["movie:1", 0, 0, 90, 0], ["tv:11", 0, 0, 0, 80]]
+    assert out["tv:10"] == [["movie:1", 0, 0, 90, 0, 0], ["tv:11", 0, 0, 0, 80, 0]]
 
 
 def test_tmdb_rank_edges_boosts_overlap_and_keeps_media_type():
@@ -100,7 +100,7 @@ def test_sample_build_writes_derived_only_artifact(tmp_path):
     tv_rows = [r for r in catalog["rows"] if r[0].startswith("tv:")]
     assert all(r[f.index("seasons")] and r[f.index("status")] in ("ended", "ongoing") for r in tv_rows)
     shard = json.loads((tmp_path / "neighbors" / f"{shard_of('movie:141', meta['shards'])}.json").read_text("utf-8"))
-    assert shard["movie:141"] and all(len(e) == 5 for e in shard["movie:141"])
+    assert shard["movie:141"] and all(len(e) == 6 for e in shard["movie:141"])
     dark = json.loads((tmp_path / "neighbors" / f"{shard_of('tv:70523', meta['shards'])}.json").read_text("utf-8"))
     assert any(e[0].startswith("movie:") for e in dark["tv:70523"])  # cross-type edge from Reddit
     curators = json.loads((tmp_path / "curators.json").read_text("utf-8"))

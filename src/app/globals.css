@@ -1285,3 +1285,11 @@ select:focus-visible {
   margin: 0;
   padding: var(--space-3);
 }
+
+/* "Rate a few shows to improve TV picks" (For you, TV filter). */
+.tv-nudge {
+  margin: var(--space-3) 0 var(--space-4);
+}
+.tv-nudge .grid {
+  margin-top: var(--space-3);
+}

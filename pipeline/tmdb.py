@@ -77,11 +77,30 @@ class TMDBClient:
         key = json.dumps([path, sorted(params.items())], separators=(",", ":"))
         return self.cache_dir / f"{hashlib.sha1(key.encode()).hexdigest()}.json"
 
+    def _ttl(self, cp: Path | None, path: str, ttl: float | None) -> float:
+        return (self.ttl + jitter_fraction(cp.name if cp else path) * self.ttl_jitter) if ttl is None else ttl
+
+    def is_fresh(self, path: str, ttl: float | None = None, **params: Any) -> bool:
+        """True when `get` would be answered from the cache (no request)."""
+        params = {k: v for k, v in params.items() if v is not None}
+        cp = self._cache_path(path, params)
+        return bool(cp and cp.exists() and time.time() - cp.stat().st_mtime < self._ttl(cp, path, ttl))
+
+    def peek(self, path: str, **params: Any) -> dict | None:
+        """Any cached copy, however old (used when the per-run request budget is spent)."""
+        params = {k: v for k, v in params.items() if v is not None}
+        cp = self._cache_path(path, params)
+        if cp and cp.exists():
+            try:
+                return json.loads(cp.read_text("utf-8"))
+            except ValueError:
+                return None
+        return None
+
     def get(self, path: str, ttl: float | None = None, **params: Any) -> dict:
         params = {k: v for k, v in params.items() if v is not None}
         cp = self._cache_path(path, params)
-        ttl = (self.ttl + jitter_fraction(cp.name if cp else path) * self.ttl_jitter) if ttl is None else ttl
-        if cp and cp.exists() and time.time() - cp.stat().st_mtime < ttl:
+        if cp and cp.exists() and time.time() - cp.stat().st_mtime < self._ttl(cp, path, ttl):
             return json.loads(cp.read_text("utf-8"))
         data: dict = {}
         for attempt in range(5):
@@ -108,7 +127,8 @@ class TMDBClient:
     # --- endpoints -----------------------------------------------------------------
     def details(self, key: str) -> dict:
         kind, tmdb_id = split_key(key)
-        d = self.get(f"/{kind}/{tmdb_id}", append_to_response="watch/providers")
+        # Keywords ride along with details (same request, same 3-5 day TTL) for the content bridge.
+        d = self.get(f"/{kind}/{tmdb_id}", append_to_response="watch/providers,keywords")
         if d:
             d["media_type"] = kind
         return d
@@ -120,6 +140,26 @@ class TMDBClient:
     def similar(self, key: str) -> list[dict]:
         kind, tmdb_id = split_key(key)
         return self.get(f"/{kind}/{tmdb_id}/similar").get("results", [])
+
+    def neighbors_budgeted(self, key: str, budget: list[int]) -> tuple[list[dict], list[dict]] | None:
+        """recommendations + similar for `key`, spending at most budget[0] uncached requests.
+
+        When the budget is spent, a stale cached copy is used if there is one, else None
+        (that title is picked up on a later daily run).
+        """
+        kind, tmdb_id = split_key(key)
+        paths = [f"/{kind}/{tmdb_id}/recommendations", f"/{kind}/{tmdb_id}/similar"]
+        missing = [p for p in paths if not self.is_fresh(p)]
+        if missing and budget[0] >= len(missing):
+            budget[0] -= len(missing)
+            return self.recommendations(key), self.similar(key)
+        if missing:
+            cached = [self.peek(p) for p in paths]
+            if all(x is None for x in cached):
+                return None
+            recs, sims = ((x or {}).get("results", []) for x in cached)
+            return recs, sims
+        return self.recommendations(key), self.similar(key)
 
     def search(self, title: str, year: int | None = None, kind: str | None = None) -> list[dict]:
         ttl = 30 * 86400

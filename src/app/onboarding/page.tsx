@@ -4,26 +4,11 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { SampleBanner } from "@/components/Chrome";
-import { RatingControl } from "@/components/RatingControl";
-import { Poster, TypeBadge } from "@/components/TitleCard";
+import { RatingTile as Tile } from "@/components/RatingTile";
 import { MediaToggle, SearchingHint, SearchStatus, useTitleSearch, type SearchType } from "@/components/TitleSearch";
 import { ONBOARDING_TARGET } from "@/lib/config";
 import { onboardingPicks } from "@/lib/search";
 import { activeRatings, updateSettings, useStore } from "@/lib/store";
-import type { Title } from "@/lib/types";
-
-function Tile({ title }: { title: Title }) {
-  return (
-    <div className="tile">
-      <Poster title={title} size="w185" />
-      <h3>
-        {title.title} <TypeBadge title={title} />
-      </h3>
-      <span className="muted small">{title.year}</span>
-      <RatingControl title={title} />
-    </div>
-  );
-}
 
 export default function OnboardingPage() {
   const { ready, catalog } = useApp();

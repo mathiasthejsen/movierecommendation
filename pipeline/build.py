@@ -19,6 +19,7 @@ from pathlib import Path
 
 from . import curators as cur
 from . import mlcache
+from .content import Features, bridge_edges, edge_type_counts, keywords_of
 from .artifact import TMDB_GENRES, Title, merge_edges, title_from_details, tmdb_rank_edges, write_artifact
 from .config import Config
 from .extract import load_llm_extractor
@@ -66,13 +67,20 @@ def run_sample(cfg: Config) -> int:
         entries = cur.parse_letterboxd_rss((sample.SAMPLE_DIR / fixture).read_text("utf-8"))
         year_of = lambda k: titles[k].year if k in titles else None  # noqa: E731
         picks += cur.entries_to_picks(entries, handle, resolver, cfg.min_year, year_of)
-    neighbors = merge_edges(ml_neighbors, reddit_edges, tmdb_edges, set(titles), cap=cfg.top_k + 20)
+    features = {
+        k: Features(k, keywords_of(details[k]), t.genres, details[k].get("original_language"), t.year, t.votes, t.rating)
+        for k, t in titles.items()
+    }
+    # The sample is small, so one shared keyword is enough there.
+    content_edges = bridge_edges(features, k=cfg.content_k, min_sim=cfg.content_min_sim, min_shared=1)
+    neighbors = merge_edges(ml_neighbors, reddit_edges, tmdb_edges, set(titles), cap=cfg.top_k + 20, content=content_edges)
     size = write_artifact(
         cfg.output_dir, titles, neighbors, shards=4, region=cfg.watch_region, min_year=cfg.min_year, sample=True,
         genres=genres, providers=providers,
         counts={
             "movielensEdges": sum(map(len, ml_neighbors.values())), "redditEdges": len(reddit_edges),
-            "tmdbEdges": len(tmdb_edges), "traktEdges": 0,
+            "tmdbEdges": len(tmdb_edges), "traktEdges": 0, "contentEdges": len(content_edges),
+            "tvWithNeighbors": sum(1 for k, v in neighbors.items() if k.startswith("tv:") and v),
         },
         curators=cur.public_curators(curators), picks=cur.merge_history([], picks),
     )
@@ -119,11 +127,12 @@ def run_full(cfg: Config) -> int:
 
     # 3. Optional Trakt related shows.
     trakt_edges: dict[tuple[str, str], float] = {}
+    trakt_client = None
     if cfg.trakt_client_id:
         from .trakt import TraktClient, trakt_edges as get_trakt_edges
 
-        trakt_edges = get_trakt_edges(TraktClient(cfg.trakt_client_id, cfg.cache_dir),
-                                      sorted(k for k in catalog if k.startswith("tv:")))
+        trakt_client = TraktClient(cfg.trakt_client_id, cfg.cache_dir)
+        trakt_edges = get_trakt_edges(trakt_client, sorted(k for k in catalog if k.startswith("tv:")), budget=cfg.trakt_budget)
         extra |= {dst for _, dst in trakt_edges}
     else:
         log.info("TRAKT_CLIENT_ID not set; skipping Trakt.")
@@ -166,23 +175,58 @@ def run_full(cfg: Config) -> int:
     # 6. Metadata for every title (poster, overview, genres, runtime, seasons, providers).
     log.info("Fetching TMDB details for %d titles", len(catalog))
     titles: dict[str, Title] = {}
+    features: dict[str, Features] = {}
     for i, key in enumerate(sorted(catalog)):
-        t = title_from_details(tmdb.details(key), region, ml_years.get(key))
+        d = tmdb.details(key)
+        t = title_from_details(d, region, ml_years.get(key))
         if t and t.year >= cfg.min_year:
             titles[key] = t
+            features[key] = Features(key, keywords_of(d), t.genres, d.get("original_language"), t.year, t.votes, t.rating)
         if i and i % 1000 == 0:
             log.info("  %d/%d (requests: %d)", i, len(catalog), tmdb.requests_made)
+
+    # 7. Wider series coverage: TMDB recommendations/similar (and Trakt) for EVERY series in the
+    #    catalogue, most-voted first. A per-run budget of uncached requests keeps each daily run
+    #    polite; the 3-5 day cache spreads the remainder over the next runs.
+    tv_keys = sorted((k for k in titles if k.startswith("tv:")), key=lambda k: -titles[k].votes)
+    budget = [cfg.tv_fetch_budget]
+    deferred = 0
+    for key in tv_keys:
+        if key in new_keys:
+            continue  # already fetched in step 2
+        got = tmdb.neighbors_budgeted(key, budget)
+        if got is None:
+            deferred += 1
+            continue
+        tmdb_edges.update(tmdb_rank_edges(key, *got))
+    log.info("Series neighbours: %d series, %d deferred to a later run (budget left %d)", len(tv_keys), deferred, budget[0])
+    if trakt_client is not None:
+        seen = {s for s, _ in trakt_edges}
+        trakt_edges.update(get_trakt_edges(trakt_client, [k for k in tv_keys if k not in seen], budget=cfg.trakt_budget))
+
+    # 8. Content bridge: film <-> series and series <-> series by keywords, categories, language, decade.
+    content_edges = bridge_edges(
+        features, k=cfg.content_k, min_sim=cfg.content_min_sim, min_shared=cfg.content_min_shared,
+        min_votes={"tv": cfg.content_min_votes_tv, "movie": cfg.content_min_votes_movie}, min_rating=cfg.content_min_rating,
+    )
 
     genres = {**TMDB_GENRES, **tmdb.genres()}
     providers = tmdb.providers(region)
     counts = {
         "movielensEdges": sum(map(len, ml_neighbors.values())), "redditEdges": len(reddit_edges),
-        "tmdbEdges": len(tmdb_edges), "traktEdges": len(trakt_edges),
+        "tmdbEdges": len(tmdb_edges), "traktEdges": len(trakt_edges), "contentEdges": len(content_edges),
     }
     top_k = cfg.top_k
     limit = cfg.max_artifact_mb * 1024 * 1024
     while True:
-        neighbors = merge_edges(ml_neighbors, reddit_edges, tmdb_edges, set(titles), cap=top_k + 20, trakt=trakt_edges)
+        neighbors = merge_edges(
+            ml_neighbors, reddit_edges, tmdb_edges, set(titles), cap=top_k + 20, trakt=trakt_edges, content=content_edges
+        )
+        n_tv = sum(1 for k in titles if k.startswith("tv:"))
+        counts["tvWithNeighbors"] = sum(1 for k, v in neighbors.items() if k.startswith("tv:") and v)
+        counts.update({f"edges:{name}": n for name, n in edge_type_counts(
+            [(s, row[0]) for s, rows in neighbors.items() for row in rows]).items()})
+        log.info("Series with neighbours: %d/%d (%.0f%%)", counts["tvWithNeighbors"], n_tv, 100 * counts["tvWithNeighbors"] / max(1, n_tv))
         size = write_artifact(
             cfg.output_dir, titles, neighbors, shards=cfg.shards, region=region, min_year=cfg.min_year,
             sample=False, genres=genres, providers=providers, counts=counts,

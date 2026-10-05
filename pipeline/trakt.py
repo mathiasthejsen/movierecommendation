@@ -26,13 +26,18 @@ class TraktClient:
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.ttl = ttl_days * 86400
+        self.requests_made = 0
 
-    def _get(self, path: str, **params) -> list:
+    def _get(self, path: str, allow_fetch: bool = True, **params) -> list | None:
+        """Cached GET. With allow_fetch=False, returns any cached copy (however old) or None."""
         cp = None
         if self.cache_dir:
             cp = self.cache_dir / (hashlib.sha1(json.dumps([path, sorted(params.items())]).encode()).hexdigest() + ".json")
-            if cp.exists() and time.time() - cp.stat().st_mtime < self.ttl:
+            if cp.exists() and (time.time() - cp.stat().st_mtime < self.ttl or not allow_fetch):
                 return json.loads(cp.read_text("utf-8"))
+        if not allow_fetch:
+            return None
+        self.requests_made += 1
         for _ in range(4):
             resp = self.session.get(f"{API}{path}", params=params, timeout=30)
             if resp.status_code == 429:
@@ -47,22 +52,25 @@ class TraktClient:
             cp.write_text(json.dumps(data), "utf-8")
         return data
 
-    def related_shows(self, tv_tmdb_id: int, limit: int = 20) -> list[int]:
-        found = self._get(f"/search/tmdb/{tv_tmdb_id}", type="show")
+    def related_shows(self, tv_tmdb_id: int, limit: int = 20, allow_fetch: bool = True) -> list[int]:
+        found = self._get(f"/search/tmdb/{tv_tmdb_id}", allow_fetch, type="show")
         if not found:
             return []
         trakt_id = found[0].get("show", {}).get("ids", {}).get("trakt")
         if not trakt_id:
             return []
-        related = self._get(f"/shows/{trakt_id}/related", limit=limit)
+        related = self._get(f"/shows/{trakt_id}/related", allow_fetch, limit=limit) or []
         return [s["ids"]["tmdb"] for s in related if s.get("ids", {}).get("tmdb")]
 
 
-def trakt_edges(client: TraktClient, tv_keys: list[str]) -> dict[tuple[str, str], float]:
+def trakt_edges(client: TraktClient, tv_keys: list[str], budget: int | None = None) -> dict[tuple[str, str], float]:
+    """Related-show edges for every series. At most `budget` uncached requests per run (the 13-day
+    cache spreads the rest over the following daily runs); beyond that, cached results are used."""
     edges: dict[tuple[str, str], float] = {}
     for key in tv_keys:
         tmdb_id = int(key.split(":", 1)[1])
-        for i, rid in enumerate(client.related_shows(tmdb_id)):
+        allow = budget is None or client.requests_made < budget
+        for i, rid in enumerate(client.related_shows(tmdb_id, allow_fetch=allow)):
             edges[(key, f"tv:{rid}")] = max(0.1, 0.9 - 0.035 * i)
-    log.info("Trakt: %d related-show edges", len(edges))
+    log.info("Trakt: %d related-show edges (%d requests this run)", len(edges), client.requests_made)
     return edges

@@ -6,6 +6,8 @@ export interface SourceWeights {
   reddit: number;
   tmdb: number;
   trakt: number;
+  /** Keyword/category similarity (pipeline content bridge); the only film <-> series link without Reddit. */
+  content: number;
 }
 
 export type MediaFilter = MediaType | "both";
@@ -67,9 +69,15 @@ export interface Recommendation {
   reason: string;
 }
 
-export const DEFAULT_WEIGHTS: SourceWeights = { movielens: 1, reddit: 0.9, tmdb: 0.5, trakt: 0.45 };
-const SOURCE_ORDER: Source[] = ["reddit", "movielens", "tmdb", "trakt"];
-const SOURCE_LABEL: Record<Source, string> = { reddit: "Reddit", movielens: "MovieLens", tmdb: "TMDB", trakt: "Trakt" };
+export const DEFAULT_WEIGHTS: SourceWeights = { movielens: 1, reddit: 0.9, tmdb: 0.5, trakt: 0.45, content: 0.5 };
+const SOURCE_ORDER: Source[] = ["reddit", "movielens", "tmdb", "trakt", "content"];
+const SOURCE_LABEL: Record<Source, string> = {
+  reddit: "Reddit",
+  movielens: "MovieLens",
+  tmdb: "TMDB",
+  trakt: "Trakt",
+  content: "keywords",
+};
 const CURATOR_CAP = 1.5;
 
 /** Map a stored rating to a preference weight in [-1, 1]. 3 stars is neutral. */
@@ -143,7 +151,9 @@ export function formatReason(becauseTitles: string[], sources: Source[], curator
   const parts: string[] = [];
   if (becauseTitles.length) {
     const shown = becauseTitles.slice(0, 2);
-    parts.push(`Because you liked ${joinNames(shown, becauseTitles.length - shown.length)}`);
+    // Only a keyword/theme match (no taste signal): say so, e.g. "Similar themes to Heat · keywords".
+    const lead = sources.length === 1 && sources[0] === "content" ? "Similar themes to" : "Because you liked";
+    parts.push(`${lead} ${joinNames(shown, becauseTitles.length - shown.length)}`);
   }
   if (sources.length) parts.push(sources.map((s) => SOURCE_LABEL[s]).join(" + "));
   if (curators.length) {
@@ -165,7 +175,7 @@ const emptyAcc = (): Accumulator => ({
   pos: 0,
   neg: 0,
   bySeed: new Map(),
-  bySource: { movielens: 0, reddit: 0, tmdb: 0, trakt: 0 },
+  bySource: { movielens: 0, reddit: 0, tmdb: 0, trakt: 0, content: 0 },
 });
 
 /**
@@ -200,15 +210,17 @@ export function rankRecommendations(
     if (!weight) continue;
     const edges = neighbors.get(seed);
     if (!edges) continue;
-    for (const [target, ml, rd, tm, tr = 0] of edges) {
+    for (const [target, ml, rd, tm, tr = 0, ct = 0] of edges) {
       const parts: Record<Source, number> = {
         movielens: (w.movielens * ml) / 100,
         reddit: (w.reddit * rd) / 100,
         tmdb: (w.tmdb * tm) / 100,
         trakt: (w.trakt * tr) / 100,
+        content: (w.content * ct) / 100,
       };
-      const present = [ml, rd, tm, tr].filter((v) => v > 0).length;
-      const s = (parts.movielens + parts.reddit + parts.tmdb + parts.trakt) * (present >= 2 ? 1 + agreement : 1);
+      const present = [ml, rd, tm, tr, ct].filter((v) => v > 0).length;
+      const s =
+        (parts.movielens + parts.reddit + parts.tmdb + parts.trakt + parts.content) * (present >= 2 ? 1 + agreement : 1);
       if (s <= 0) continue;
       let a = acc.get(target);
       if (!a) acc.set(target, (a = emptyAcc()));
@@ -293,4 +305,41 @@ export function filterByCategories<T extends { title: Title }>(recs: T[], catego
   if (!categories?.length) return recs;
   const f: RankFilters = { categories: [...categories] };
   return recs.filter((r) => passesFilters(r.title, f));
+}
+
+export interface DiversifyOptions {
+  /** Window size: aim for at least one series in every `every` slots (default 5). */
+  every?: number;
+  /** A series is only promoted if its score is at least this (default 0.2 ≈ one solid link from a title you liked). */
+  minScore?: number;
+}
+
+/**
+ * Light media diversification for the "Both" feed. Films usually have far more (and stronger)
+ * edges than series, so a films-only rater would otherwise see series only far down the list.
+ * In every window of `every` slots, if no series made it in on its own, the best remaining series
+ * is moved into the window's last slot — but only when its own score reaches `minScore`, so badly
+ * matching series are never forced in. (Film scores add up over many dense MovieLens links, so a
+ * ratio against the displaced film would never let a series through.) The order within each media type is
+ * unchanged, and nothing is dropped.
+ */
+export function diversifyMedia<T extends { title: Pick<Title, "type">; score: number }>(recs: T[], options: DiversifyOptions = {}): T[] {
+  const every = options.every ?? 5;
+  const minScore = options.minScore ?? 0.2;
+  if (every < 2 || !recs.some((r) => r.title.type === "tv") || !recs.some((r) => r.title.type === "movie")) return recs;
+  const remaining = [...recs];
+  const out: T[] = [];
+  while (remaining.length) {
+    const slot = out.length % every;
+    if (slot === every - 1 && remaining[0].title.type !== "tv") {
+      const windowHasTv = out.slice(out.length - slot).some((r) => r.title.type === "tv");
+      const i = windowHasTv ? -1 : remaining.findIndex((r) => r.title.type === "tv");
+      if (i > 0 && remaining[i].score >= minScore) {
+        out.push(remaining.splice(i, 1)[0]);
+        continue;
+      }
+    }
+    out.push(remaining.shift()!);
+  }
+  return out;
 }

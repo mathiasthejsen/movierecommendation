@@ -25,8 +25,11 @@ export interface Title {
   status: "ended" | "ongoing" | null;
 }
 
-/** [neighbor key, movielens, reddit, tmdb, trakt] with scores 0-100 */
-export type Edge = [TitleKey, number, number, number, number];
+/**
+ * [neighbor key, movielens, reddit, tmdb, trakt, content] with scores 0-100.
+ * `content` (keyword/category bridge, links films and series) is missing in older artifacts.
+ */
+export type Edge = [TitleKey, number, number, number, number, number?];
 
 export interface Meta {
   version: number;
@@ -84,4 +87,4 @@ export interface WatchItem {
   deleted?: boolean;
 }
 
-export type Source = "reddit" | "movielens" | "tmdb" | "trakt";
+export type Source = "reddit" | "movielens" | "tmdb" | "trakt" | "content";

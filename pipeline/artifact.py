@@ -4,7 +4,7 @@ Layout (all under ``public/data``)::
 
     meta.json               version, counts, genre/provider names, attribution
     catalog.json            {"fields": [...], "rows": [[...], ...]} movie + TV metadata
-    neighbors/<n>.json      {"movie:603": [["tv:1396", ml, reddit, tmdb, trakt], ...]}
+    neighbors/<n>.json      {"movie:603": [["tv:1396", ml, reddit, tmdb, trakt, content], ...]}
                             scores are integers 0-100; shard = shard_of(key)
     curators.json           curator config (public fields) + accumulated picks
 
@@ -33,7 +33,8 @@ CATALOG_FIELDS = [
     "providers", "overview", "seasons", "status",
 ]
 OVERVIEW_CHARS = 220
-N_SOURCES = 4  # movielens, reddit, tmdb, trakt
+N_SOURCES = 5  # movielens, reddit, tmdb, trakt, content (keyword/category bridge)
+CROSS_TYPE_KEEP = 15  # film<->series edges always kept beyond the cap (they are the only bridge)
 
 TMDB_GENRES = {
     28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime", 99: "Documentary",
@@ -149,10 +150,12 @@ def merge_edges(
     keep: set[str],
     cap: int,
     trakt: dict[tuple[str, str], float] | None = None,
+    content: dict[tuple[str, str], float] | None = None,
 ) -> dict[str, list[list]]:
     """Normalise each source to 0-100 and merge into capped per-title lists."""
     ml_scale = _percentile_scale([s for row in ml.values() for _, s in row])
     rd_scale = _percentile_scale(list(reddit.values()))
+    ct_scale = _percentile_scale(list((content or {}).values()))
     merged: dict[str, dict[str, list[float]]] = {}
 
     def add(src: str, dst: str, idx: int, score: float) -> None:
@@ -170,10 +173,18 @@ def merge_edges(
         add(src, dst, 2, s)
     for (src, dst), s in (trakt or {}).items():
         add(src, dst, 3, s)
+    for (src, dst), s in (content or {}).items():
+        add(src, dst, 4, s / ct_scale)
 
     out: dict[str, list[list]] = {}
     for src, targets in merged.items():
-        ranked = sorted(targets.items(), key=lambda kv: -(kv[1][0] + kv[1][1] + 0.6 * kv[1][2] + 0.5 * kv[1][3]))[:cap]
+        ranked = sorted(
+            targets.items(), key=lambda kv: -(kv[1][0] + kv[1][1] + 0.6 * kv[1][2] + 0.5 * kv[1][3] + 0.5 * kv[1][4])
+        )
+        kind = src.split(":", 1)[0]
+        cross = [kv for kv in ranked[cap:] if kv[0].split(":", 1)[0] != kind]
+        kept_cross = sum(1 for kv in ranked[:cap] if kv[0].split(":", 1)[0] != kind)
+        ranked = ranked[:cap] + cross[: max(0, CROSS_TYPE_KEEP - kept_cross)]
         rows = [[dst, *(round(v * 100) for v in scores)] for dst, scores in ranked]
         out[src] = [r for r in rows if any(r[1:])]
     return out

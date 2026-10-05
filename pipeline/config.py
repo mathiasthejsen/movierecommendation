@@ -62,6 +62,18 @@ class Config:
     ig_user_id: str = field(default_factory=lambda: _env("IG_USER_ID"))
     ig_access_token: str = field(default_factory=lambda: _env("IG_ACCESS_TOKEN"))
     curators_enabled: bool = field(default_factory=lambda: _env("CURATORS_ENABLED", "true").lower() != "false")
+    # Uncached TMDB requests per run for series recommendations/similar (the 3-5 day cache
+    # spreads the rest over later daily runs), and uncached Trakt requests per run.
+    tv_fetch_budget: int = field(default_factory=lambda: _env_int("TV_FETCH_BUDGET", 5000))
+    trakt_budget: int = field(default_factory=lambda: _env_int("TRAKT_BUDGET", 1500))
+    # Content bridge (film <-> series keyword similarity).
+    content_k: int = field(default_factory=lambda: _env_int("CONTENT_K", 15))
+    content_min_sim: float = field(default_factory=lambda: float(_env("CONTENT_MIN_SIM", "0.1")))
+    content_min_shared: int = field(default_factory=lambda: _env_int("CONTENT_MIN_SHARED", 2))
+    # Quality gate for content-link targets (TMDB votes / rating): no obscure or badly rated picks.
+    content_min_votes_tv: int = field(default_factory=lambda: _env_int("CONTENT_MIN_VOTES_TV", 150))
+    content_min_votes_movie: int = field(default_factory=lambda: _env_int("CONTENT_MIN_VOTES_MOVIE", 300))
+    content_min_rating: float = field(default_factory=lambda: float(_env("CONTENT_MIN_RATING", "6.5")))
 
     @property
     def has_tmdb(self) -> bool:
