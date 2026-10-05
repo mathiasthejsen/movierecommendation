@@ -94,3 +94,76 @@ begin
   end if;
 end $$;
 select true as watchlist_sharing_enforced;
+-- 9. Notifications and push subscriptions: no access for signed-out visitors; signed-in users
+--    can't create or delete notifications and may only change read_at; the notify rate limit is
+--    service-role only.
+select not has_table_privilege('anon', 'public.notifications', 'select')
+   and not has_table_privilege('anon', 'public.push_subscriptions', 'select')
+   and not has_table_privilege('authenticated', 'public.notifications', 'insert')
+   and not has_table_privilege('authenticated', 'public.notifications', 'delete')
+   and has_column_privilege('authenticated', 'public.notifications', 'read_at', 'update')
+   and not has_column_privilege('authenticated', 'public.notifications', 'title_key', 'update')
+   and not has_column_privilege('authenticated', 'public.notifications', 'user_id', 'update')
+   and not has_table_privilege('authenticated', 'public.notify_usage', 'select')
+   and not has_function_privilege('authenticated', 'public.notify_consume(uuid, integer, integer)', 'execute')
+   and not has_function_privilege('anon', 'public.notify_consume(uuid, integer, integer)', 'execute') as notifications_locked;
+
+-- 10. Behaviour (rolled back, throwaway users only): a recipient sees and can mark their own
+--     notification read; the actor can neither read nor insert notifications; push
+--     subscriptions are own-rows only.
+do $$
+declare
+  a uuid := gen_random_uuid(); -- actor
+  b uuid := gen_random_uuid(); -- recipient
+  b_sees int;
+  a_sees int;
+  a_marked int;
+  b_marked int;
+  a_inserted boolean := false;
+  a_sub_for_b boolean := false;
+  b_sees_a_sub int;
+begin
+  begin
+    insert into auth.users (id, aud, role, email)
+    values (a, 'authenticated', 'authenticated', a || '@checks.invalid'),
+           (b, 'authenticated', 'authenticated', b || '@checks.invalid');
+    insert into public.notifications (user_id, actor_id, title_key) values (b, a, 'movie:603');
+
+    -- As A (the actor).
+    perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+    execute 'set local role authenticated';
+    select count(*) into a_sees from public.notifications;
+    update public.notifications set read_at = now() where user_id = b;
+    get diagnostics a_marked = row_count;
+    begin
+      insert into public.notifications (user_id, actor_id, title_key) values (b, a, 'movie:604');
+      a_inserted := true;
+    exception when insufficient_privilege then null;
+    end;
+    insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values (a, 'https://push.checks.invalid/a', 'x', 'y');
+    begin
+      insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values (b, 'https://push.checks.invalid/b', 'x', 'y');
+      a_sub_for_b := true;
+    exception when insufficient_privilege or check_violation then null; -- RLS: new row violates policy
+    end;
+    execute 'reset role';
+
+    -- As B (the recipient).
+    perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+    execute 'set local role authenticated';
+    select count(*) into b_sees from public.notifications where user_id = b;
+    update public.notifications set read_at = now() where user_id = b;
+    get diagnostics b_marked = row_count;
+    select count(*) into b_sees_a_sub from public.push_subscriptions where user_id = a;
+    execute 'reset role';
+
+    raise exception using errcode = 'P0001', message = 'rollback checks';
+  exception when sqlstate 'P0001' then
+    null; -- everything above is rolled back
+  end;
+  if b_sees <> 1 or b_marked <> 1 or a_sees <> 0 or a_marked <> 0 or a_inserted or a_sub_for_b or b_sees_a_sub <> 0 then
+    raise exception 'notification RLS check FAILED: b_sees=%, b_marked=%, a_sees=%, a_marked=%, a_inserted=%, a_sub_for_b=%, b_sees_a_sub=%',
+      b_sees, b_marked, a_sees, a_marked, a_inserted, a_sub_for_b, b_sees_a_sub;
+  end if;
+end $$;
+select true as notifications_rls_enforced;

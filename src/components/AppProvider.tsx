@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { isNewDataAvailable, loadArtifactCurators, loadCatalog, loadMeta } from "@/lib/artifact";
 import { BASE_PATH } from "@/lib/config";
 import { clearFamily, ensureProfile, refreshFamily } from "@/lib/family";
+import { clearNotifications, refreshNotifications, subscribeNotifications } from "@/lib/notifications";
 import { flush, setTitleLookup, syncNow, useStore } from "@/lib/store";
 import { getSupabase } from "@/lib/supabase";
 import type { CuratorPick, Meta, Title, TitleKey } from "@/lib/types";
@@ -77,6 +78,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (data.session) {
         void syncNow();
         void ensureProfile().then(refreshFamily);
+        void refreshNotifications();
       }
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
@@ -84,14 +86,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (s && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
         void syncNow();
         void ensureProfile().then(refreshFamily);
+        void refreshNotifications();
       }
-      if (event === "SIGNED_OUT") clearFamily();
+      if (event === "SIGNED_OUT") {
+        clearFamily();
+        clearNotifications();
+      }
     });
     const onOnline = () => void flush();
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
       void syncNow();
       void refreshFamily();
+      void refreshNotifications();
     };
     window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisible);
@@ -101,6 +108,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
+
+  // Live "It's a match" notifications while the app is open (Supabase Realtime, own rows via RLS).
+  const userId = session?.user.id;
+  // A new match means a family watchlist changed: reload it so Together already shows the title.
+  useEffect(() => (userId ? subscribeNotifications(userId, () => void refreshFamily()) : undefined), [userId]);
 
   useEffect(() => {
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {

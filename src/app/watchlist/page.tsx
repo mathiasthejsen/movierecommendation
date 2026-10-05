@@ -5,11 +5,13 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { CategoryBar } from "@/components/CategoryBar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { TitleCard } from "@/components/TitleCard";
 import { MediaToggle, type SearchType } from "@/components/TitleSearch";
 import { loadNeighbors } from "@/lib/artifact";
 import { supabaseConfigured } from "@/lib/config";
 import { refreshFamily, useFamily } from "@/lib/family";
+import { getNotifications, markRead, refreshNotifications } from "@/lib/notifications";
 import { passesFilters, preferenceWeight, rankRecommendations } from "@/lib/ranking";
 import { activeRatings, activeWatchlist, useStore } from "@/lib/store";
 import {
@@ -86,8 +88,17 @@ function Watchlist() {
   const nameOf = (id: string) => (id === meId ? myName : members.find((m) => m.userId === id)?.name ?? "Family member");
 
   useEffect(() => {
-    if (signedIn) void refreshFamily();
+    if (!signedIn) return;
+    void refreshFamily();
+    void refreshNotifications();
   }, [signedIn]);
+  const openTogether = (key: TitleKey) => {
+    void refreshFamily(); // the partner's add may be newer than the cached family data
+    setTab("together");
+    setTonight(null);
+    scrolledFor.current = null;
+    setHighlight(key);
+  };
 
   // Deep link from the "It's a match" sheet: /watchlist/?tab=together&highlight=movie:603
   useEffect(() => {
@@ -95,6 +106,8 @@ function Watchlist() {
     if (t === "together" || t === "mine" || t === "member") setTab(t);
     const h = params.get("highlight");
     setHighlight(h || null);
+    // Opened from a push notification: that match counts as seen.
+    if (h) void markRead(getNotifications().items.filter((n) => n.key === h && !n.readAt).map((n) => n.id));
   }, [params]);
   const scrolledFor = useRef<TitleKey | null>(null);
   useEffect(() => {
@@ -158,7 +171,10 @@ function Watchlist() {
 
   return (
     <>
-      <h1>Watchlist</h1>
+      <div className="page-head">
+        <h1>Watchlist</h1>
+        {signedIn ? <NotificationBell onOpenTitle={openTogether} /> : null}
+      </div>
       {tabs.length > 1 ? (
         <div className="segmented tabs" role="tablist" aria-label="Whose watchlist">
           {tabs.map(([t, label]) => (

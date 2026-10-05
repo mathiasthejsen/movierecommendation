@@ -13,6 +13,7 @@ import { categoryLabel } from "@/lib/categories";
 import { ONBOARDING_TARGET } from "@/lib/config";
 import { isFollowed } from "@/lib/curators";
 import { refreshFamily } from "@/lib/family";
+import { refreshNotifications } from "@/lib/notifications";
 import { timeAgo } from "@/lib/pipeline";
 import { loadHideWatchlist, saveHideWatchlist, withoutHidden } from "@/lib/prefs";
 import {
@@ -195,7 +196,7 @@ export default function FeedPage() {
     setRefreshing(true);
     try {
       // Also reload family watchlists (for the Watchlist → Together / partner tabs).
-      await Promise.all([syncNow(), refreshFamily()]);
+      await Promise.all([syncNow(), refreshFamily(), refreshNotifications()]);
     } finally {
       setPendingRefresh(true);
     }

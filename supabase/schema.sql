@@ -252,3 +252,102 @@ $$;
 
 revoke all on function public.pipeline_reserve(uuid, integer) from public, anon, authenticated;
 grant execute on function public.pipeline_reserve(uuid, integer) to service_role;
+
+-- ---------------------------------------------------------------------------------
+-- "It's a match" notifications to the other family member (notify-match Edge Function).
+-- Rows are only created by the server (service role); clients can read their own and set read_at.
+create table if not exists public.notifications (
+  id         uuid        primary key default gen_random_uuid(),
+  user_id    uuid        not null references auth.users (id) on delete cascade, -- recipient
+  actor_id   uuid        not null references auth.users (id) on delete cascade,
+  title_key  text        not null check (title_key ~ '^(movie|tv):[0-9]+$'),
+  kind       text        not null default 'match' check (kind in ('match')),
+  created_at timestamptz not null default now(),
+  read_at    timestamptz,
+  check (user_id <> actor_id),
+  unique (user_id, actor_id, title_key, kind) -- re-adding a title doesn't notify again
+);
+create index if not exists notifications_user_created_idx on public.notifications (user_id, created_at desc);
+alter table public.notifications enable row level security;
+
+drop policy if exists "notifications: read own" on public.notifications;
+create policy "notifications: read own" on public.notifications
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "notifications: mark own read" on public.notifications;
+create policy "notifications: mark own read" on public.notifications
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+-- No insert/delete policies, and column-level grants: clients may only change read_at.
+revoke all on public.notifications from anon, authenticated;
+grant select on public.notifications to authenticated;
+grant update (read_at) on public.notifications to authenticated;
+
+-- Live updates while the app is open (Supabase Realtime respects the RLS policy above).
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+        where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notifications'
+     ) then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+end
+$$;
+
+-- Web Push subscriptions (one per browser/device), managed by their owner.
+create table if not exists public.push_subscriptions (
+  id           bigint      generated always as identity primary key,
+  user_id      uuid        not null default auth.uid() references auth.users (id) on delete cascade,
+  endpoint     text        not null unique check (endpoint ~ '^https://' and char_length(endpoint) <= 1000),
+  p256dh       text        not null check (char_length(p256dh) between 1 and 200),
+  auth         text        not null check (char_length(auth) between 1 and 100),
+  created_at   timestamptz not null default now(),
+  last_used_at timestamptz
+);
+create index if not exists push_subscriptions_user_idx on public.push_subscriptions (user_id);
+alter table public.push_subscriptions enable row level security;
+
+drop policy if exists "push: own rows" on public.push_subscriptions;
+create policy "push: own rows" on public.push_subscriptions
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+revoke all on public.push_subscriptions from anon, authenticated;
+grant select, insert, delete on public.push_subscriptions to authenticated;
+
+-- Rate limit for notify-match: fixed window per actor (service role only).
+create table if not exists public.notify_usage (
+  actor_id     uuid        primary key references auth.users (id) on delete cascade,
+  window_start timestamptz not null default now(),
+  count        integer     not null default 0
+);
+alter table public.notify_usage enable row level security;
+revoke all on public.notify_usage from anon, authenticated;
+
+create or replace function public.notify_consume(p_actor uuid, p_limit integer, p_window_seconds integer)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  allowed boolean;
+begin
+  insert into public.notify_usage as u (actor_id, window_start, count)
+  values (p_actor, now(), 1)
+  on conflict (actor_id) do update
+    set window_start = case when u.window_start < now() - make_interval(secs => p_window_seconds) then now() else u.window_start end,
+        count        = case when u.window_start < now() - make_interval(secs => p_window_seconds) then 1 else u.count + 1 end
+  returning u.count <= p_limit into allowed;
+  return allowed;
+end;
+$$;
+
+revoke all on function public.notify_consume(uuid, integer, integer) from public, anon, authenticated;
+grant execute on function public.notify_consume(uuid, integer, integer) to service_role;

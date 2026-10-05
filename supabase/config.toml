@@ -20,3 +20,7 @@ additional_redirect_urls = [
 # with both legacy JWT keys and the new publishable/secret API keys. The anon key alone
 # is rejected, so strangers can't use up the TMDB quota.
 verify_jwt = false
+
+[functions.notify-match]
+# Same as tmdb-proxy: POST verifies the user JWT itself; GET (VAPID public key) is public.
+verify_jwt = false

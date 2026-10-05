@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { Credits } from "@/components/Chrome";
 import { DataUpdatePanel } from "@/components/DataUpdatePanel";
+import { NotificationSettings } from "@/components/NotificationSettings";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { Poster, TypeBadge } from "@/components/TitleCard";
 import { RatingControl } from "@/components/RatingControl";
 import { BASE_PATH, supabaseConfigured } from "@/lib/config";
+import { disablePush } from "@/lib/push";
 import { activeRatings, syncNow, updateSettings, useStore } from "@/lib/store";
 import { getSupabase, isNotInvitedError } from "@/lib/supabase";
 
@@ -106,7 +108,12 @@ export default function AccountPage() {
             <button type="button" className="btn secondary" onClick={() => void syncNow()}>
               Sync now
             </button>
-            <button type="button" className="btn secondary" onClick={() => void getSupabase()?.auth.signOut()}>
+            <button type="button" className="btn secondary" onClick={async () => {
+                // Stop push for this device first, so a shared phone doesn't get the previous user's matches.
+                await disablePush().catch(() => undefined);
+                await getSupabase()?.auth.signOut();
+              }}
+            >
               Sign out
             </button>
           </div>
@@ -117,6 +124,9 @@ export default function AccountPage() {
 
       {/* Signed-in only: display name + watchlist sharing. */}
       <ProfileSettings />
+
+      {/* Signed-in only: in-app matches + optional Web Push for this device. */}
+      <NotificationSettings />
 
       {/* Renders nothing unless signed in and the trigger-pipeline function is configured. */}
       <DataUpdatePanel />

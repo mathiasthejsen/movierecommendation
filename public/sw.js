@@ -2,7 +2,7 @@
  * Scope and cache paths derive from the registration scope, so it works under any base path
  * (e.g. https://<user>.github.io/movie-recommender/).
  */
-const VERSION = "v5";
+const VERSION = "v6";
 const SCOPE = new URL(self.registration.scope);
 const BASE = SCOPE.pathname; // ends with "/"
 const SHELL = `shell-${VERSION}`;
@@ -96,10 +96,52 @@ self.addEventListener("fetch", (event) => {
   } else if (url.pathname.startsWith(`${BASE}data/`)) {
     // Freshness checks (meta.json?check=…) go straight to the network and aren't cached.
     if (url.search) return;
-    // Network-first so meta, catalog and neighbour shards always come from the same weekly build;
+    // Network-first so meta, catalog and neighbour shards always come from the same daily build;
     // the cache is only used offline.
     event.respondWith(networkFirst(request, DATA, false));
   } else {
     event.respondWith(staleWhileRevalidate(request, SHELL));
   }
+});
+
+/* "It's a match" Web Push (sent by the notify-match Edge Function, encrypted per RFC 8291). */
+function matchUrl(key) {
+  return key ? `${BASE}watchlist/?tab=together&highlight=${encodeURIComponent(key)}` : `${BASE}watchlist/?tab=together`;
+}
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "It's a match 🎉";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "Someone in your family wants to watch the same thing.",
+      icon: `${BASE}icons/icon-192.png`,
+      badge: `${BASE}icons/icon-192.png`,
+      tag: data.tag || "match",
+      renotify: true,
+      data: { url: matchUrl(data.key) },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || matchUrl(null), SCOPE).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const existing = windows.find((w) => new URL(w.url).pathname.startsWith(BASE));
+      if (existing) {
+        await existing.focus();
+        if ("navigate" in existing) return existing.navigate(target);
+        return undefined;
+      }
+      return self.clients.openWindow(target);
+    })(),
+  );
 });

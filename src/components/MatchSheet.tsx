@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getFamily, refreshFamily } from "@/lib/family";
-import { addToWatchlist, getState, toggleWatchlist } from "@/lib/store";
+import { notifyMatch } from "@/lib/notifications";
+import { addToWatchlist, flush, getState, toggleWatchlist } from "@/lib/store";
 import { detectMatch, matchMessage, otherMembers } from "@/lib/together";
 import type { Title, TitleKey } from "@/lib/types";
 import { useApp } from "./AppProvider";
@@ -67,6 +68,9 @@ export function MatchSheetProvider({ children }: { children: ReactNode }) {
   );
 
   const show = useCallback((key: TitleKey, title: Title, names: string[]) => {
+    // Tell the partner(s) too: once my watchlist row is saved, the notify-match Edge Function
+    // re-checks the match server-side and sends the in-app notification / Web Push.
+    void flush().then(() => (isMine(key) ? notifyMatch(key) : undefined));
     counter.current += 1;
     setMatch({ key, title, names, id: counter.current }); // replaces any open sheet's content
     if (!prefersReducedMotion()) navigator.vibrate?.(30);

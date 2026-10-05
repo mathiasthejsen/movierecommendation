@@ -38,6 +38,7 @@ flowchart LR
 - [Getting API keys](#getting-api-keys)
 - [Supabase setup](#supabase-setup)
 - ["Update data now" (optional)](#update-data-now-optional)
+- ["It's a match" notifications (optional push)](#its-a-match-notifications-optional-push)
 - [Add a family member](#add-a-family-member)
 - [Deploy to GitHub Pages on your personal account](#deploy-to-github-pages-on-your-personal-account)
 - [Alternative: keep the repo private with Cloudflare Pages](#alternative-keep-the-repo-private-with-cloudflare-pages)
@@ -153,6 +154,7 @@ Everything below can be done from the project folder with the [Supabase CLI](htt
    - `watchlist`: each person writes only their own rows. Every signed-in family member can read everyone's rows, **unless** that person set `profiles.share_watchlist = false`. The read policy checks this with `exists()` on `profiles`.
    - `profiles` (display name and sharing setting): readable by every signed-in member; each person can insert or update only their own row. No emails are stored.
    - `curator_picks`: every signed-in family member can read; only the person who added a pick can insert, update or delete it. No captions or media are stored.
+   - `notifications`: each person reads only their own and may only change `read_at`; rows are created only by the `notify-match` function. `push_subscriptions`: own rows only. `notify_usage`, `tmdb_proxy_usage` and `pipeline_runs`: service role only.
 3. **Login settings:** edit the URLs in [`supabase/config.toml`](supabase/config.toml) for your Pages site, run `supabase config diff` to preview, then `supabase config push`. The file turns **sign-ups off** and sets the **Site URL** and **Redirect URLs**, and it changes nothing else. This family-only setup has no allow-list: people who weren't invited can't get a session, and the app shows *"This app is private — ask the owner for an invite."*
 4. **Edge Function (TMDB proxy):**
    ```bash
@@ -196,6 +198,34 @@ How it behaves:
 - It won't start a run while one is already queued or in progress.
 - The panel shows *Last data update: 2 days ago · Running… / Done*. It checks every 30 seconds while a run is active, stops after 20 minutes, and then shows the **Reload** prompt once the new data is deployed.
 - To turn it off, remove the `GH_TOKEN` secret (`supabase secrets unset GH_TOKEN`). The button disappears.
+
+### "It's a match" notifications (optional push)
+
+When you add a title that someone else in the family already has on their watchlist, **you** get the 🎉 sheet and **they** get a notification: *"🎉 <your name> also wants to watch <title>!"*. Tapping it opens **Watchlist → Together** with the title highlighted. Both of you must have watchlist sharing on.
+
+There are two layers:
+
+1. **In-app (always on, no setup beyond the schema):** a `notifications` table, one row per recipient + actor + title (so removing and re-adding a title doesn't notify again). Recipients can read their own rows and set `read_at`; nobody can insert from the browser. The Watchlist tab gets an unread badge and the Watchlist page a 🔔 list. Opening the list marks everything read. It loads on app open, on focus and on ↻ Refresh, and arrives live while the app is open (Supabase Realtime).
+2. **Web Push (opt-in per device):** **Me → Notifications → Enable notifications on this device**.
+   - **Android** (Chrome, Edge, Firefox) and **desktop browsers**: works in the browser and in the installed app.
+   - **iPhone/iPad**: only in the app **added to the Home Screen** (iOS/iPadOS 16.4+). In Safari the app shows that hint instead of the toggle.
+   - If push isn't supported or permission is denied, in-app notifications keep working. Signing out removes this device's subscription.
+
+Setup, once:
+
+```bash
+# 1. VAPID key pair (P-256). Prints the two values; keep the private one secret.
+node -e "const c=require('crypto');const k=c.generateKeyPairSync('ec',{namedCurve:'prime256v1'});const p=k.publicKey.export({format:'jwk'});console.log('VAPID_PUBLIC_KEY='+Buffer.concat([Buffer.from([4]),Buffer.from(p.x,'base64url'),Buffer.from(p.y,'base64url')]).toString('base64url'));console.log('VAPID_PRIVATE_KEY='+k.privateKey.export({format:'jwk'}).d)" > vapid.env
+echo "VAPID_SUBJECT=https://<user>.github.io/movierecommendation/" >> vapid.env   # or mailto:you@example.com
+supabase secrets set --env-file vapid.env && rm vapid.env
+# 2. Tables (notifications, push_subscriptions, notify_usage) are in schema.sql (safe to re-run).
+supabase db query --linked -f supabase/schema.sql
+# 3. The function that verifies matches and sends the pushes.
+supabase functions deploy notify-match --no-verify-jwt --use-api
+```
+
+How `notify-match` works: after a watchlist add that matched, the app calls it with the user's session. It trusts nothing from the browser: with the service role it re-checks that the title is on the caller's watchlist and on each recipient's, and that everyone involved shares their watchlist. Then it inserts the notification rows (`on conflict do nothing`) and sends Web Push (RFC 8291 encryption + VAPID, no third-party push service account needed) only for rows that are new. Subscriptions that the push service reports as gone (404/410) are deleted. It allows **20 calls per person per hour**. `GET` returns the VAPID **public** key, so the site needs no extra build variable. `VAPID_SUBJECT` must be a `mailto:` address or an `https:` URL (Apple rejects placeholders); the site URL works. Without the VAPID secrets the push toggle is hidden and in-app notifications still work.
+
 ## Add a family member
 
 1. Make sure Supabase can email them (see *Login emails on the free plan* above).
@@ -211,6 +241,7 @@ How it behaves:
 | **Ratings** | **Only you.** They're never shared, and they only shape your own recommendations. |
 | **Curator picks** you add | Everyone in the family (so shared Instagram/TikTok picks help everyone). |
 | **Name** | Everyone in the family. |
+| **Match notifications** | Only the recipient. When you add a title someone else already has, they're told *you* want to watch it too (only while you both share your watchlist). Push is opt-in per device. |
 
 Shared watchlists appear under **Watchlist**:
 - **Mine** is your own list.
@@ -319,7 +350,8 @@ The share target is declared in the generated `manifest.webmanifest` (from `src/
 - **RLS is on for every table** (run `supabase/checks.sql`).
 - Only the **anon/publishable** key goes in the site. `next.config.mjs` refuses to build if a `NEXT_PUBLIC_*` variable looks like a secret or a `service_role` key.
 - The TMDB key exists only in GitHub secrets (pipeline) and Supabase secrets (Edge Function).
-- The Edge Function requires a **user JWT** and applies a **per-user rate limit** and an **origin allow-list**.
+- The Edge Functions require a **user JWT** and apply **per-user rate limits** and an **origin allow-list**.
+- Notifications can only be created by the `notify-match` function (service role) after it re-checks the match; browsers can only read their own and set `read_at`. The VAPID private key is a Supabase secret only.
 - `.env`, `.env.local`, `.env.*`, `data/` (raw and cache) and `ml-32m/` are git-ignored.
 - **Secret scanning and push protection** are enabled on GitHub.
 
@@ -341,7 +373,9 @@ src/app/                    pages: feed, onboarding, search, picks, share, watch
 public/sw.js                service worker (scope = base path)
 public/data/                artifact (bundled sample; replaced by the data branch in CI)
 supabase/schema.sql         tables + RLS; checks.sql sanity checks
-supabase/functions/tmdb-proxy  Edge Function
+supabase/functions/tmdb-proxy        Edge Function: TMDB search/recommendations proxy
+supabase/functions/trigger-pipeline  Edge Function: "Update data now"
+supabase/functions/notify-match      Edge Function: match notifications + Web Push (logic.ts, webpush.ts tested with vitest)
 .github/workflows/deploy.yml   pipeline + Pages deploy
 ```
 

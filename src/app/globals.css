@@ -1184,3 +1184,104 @@ select:focus-visible {
   margin: 0;
   accent-color: var(--accent);
 }
+
+/* Unread "It's a match" badge on the Watchlist tab. */
+.tab-icon {
+  position: relative;
+  display: inline-block;
+}
+.tab .tab-icon .tab-badge {
+  position: absolute;
+  top: -4px;
+  right: -12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--pill);
+  background: var(--down);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+/* Page heading with a trailing control (Watchlist 🔔). */
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.page-head h1 {
+  margin-right: auto;
+}
+.bell {
+  position: relative;
+}
+.bell-button {
+  position: relative;
+  min-width: var(--control-h);
+  min-height: var(--control-h);
+  justify-content: center;
+  font-size: 1.1rem;
+}
+.bell-count {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--pill);
+  background: var(--down);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.bell-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 20;
+  width: min(340px, calc(100vw - 2 * var(--gutter)));
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--panel-2);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.bell-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-1) 0;
+}
+.bell-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--control-h);
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.bell-item:hover,
+.bell-item:focus-visible {
+  background: var(--panel-2);
+}
+.bell-item.unread {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.bell-empty {
+  margin: 0;
+  padding: var(--space-3);
+}
