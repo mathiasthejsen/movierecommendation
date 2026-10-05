@@ -14,6 +14,7 @@ import { ONBOARDING_TARGET } from "@/lib/config";
 import { isFollowed } from "@/lib/curators";
 import { refreshFamily } from "@/lib/family";
 import { timeAgo } from "@/lib/pipeline";
+import { loadHideWatchlist, saveHideWatchlist, withoutHidden } from "@/lib/prefs";
 import {
   filterByCategories,
   indexPicks,
@@ -58,14 +59,24 @@ export default function FeedPage() {
   const snapshots = useStore((s) => s.titles);
   const { picks, weights } = useAllPicks();
   const [filters, setFilters] = useState<RankFilters>({});
-  const [hideWatchlist, setHideWatchlist] = useState(false);
+  // Default ON (migrated once from the old OFF default); applies to both tabs and the category counts.
+  const [hideWatchlist, setHideWatchlistState] = useState(true);
+  useEffect(() => setHideWatchlistState(loadHideWatchlist(window.localStorage)), []);
+  const setHideWatchlist = (v: boolean) => {
+    setHideWatchlistState(v);
+    saveHideWatchlist(window.localStorage, v);
+    setShown(PAGE);
+  };
   const [neighbors, setNeighbors] = useState<Map<TitleKey, Edge[]>>(new Map());
   const [extraTitles, setExtraTitles] = useState<Map<TitleKey, Title>>(new Map());
   const [shown, setShown] = useState(PAGE);
   const [loadError, setLoadError] = useState<string | null>(null);
   // The visible list is "pinned": rating a card doesn't reshuffle the feed under your finger.
   // It re-ranks only on filter changes, first data load, or when you tap "Update recommendations".
-  const [pinned, setPinned] = useState<{ taste: Recommendation[]; curators: Recommendation[]; sig: string } | null>(null);
+  // `hidden` = watchlist keys snapshotted at pin time, so adding a card to the watchlist doesn't remove it under your finger.
+  const [pinned, setPinned] = useState<{ taste: Recommendation[]; curators: Recommendation[]; sig: string; hidden: Set<TitleKey> } | null>(
+    null,
+  );
   const [generation, setGeneration] = useState(0);
   const [neighborsLoaded, setNeighborsLoaded] = useState(false);
   const [loadedSig, setLoadedSig] = useState("");
@@ -136,10 +147,8 @@ export default function FeedPage() {
     if (!ready) return { taste: [] as Recommendation[], curators: [] as Recommendation[] };
     const merged = new Map<TitleKey, Title>([...extraTitles, ...Object.entries(snapshots), ...catalog]);
     const weightsByKey = new Map(ratings.map((r) => [r.key, preferenceWeight(r.kind, r.value)]));
-    const base = {
-      minYear: meta?.minYear ?? 1980,
-      exclude: hideWatchlist ? watchlist.map((w) => w.key) : [],
-    };
+    // Watchlist titles are ranked too and hidden afterwards (see `pinned.hidden`).
+    const base = { minYear: meta?.minYear ?? 1980 };
     const taste = rankRecommendations(weightsByKey, neighbors, merged, { ...base, filters: { ...rankFilters, curatedOnly: false } });
     const curators = rankRecommendations(weightsByKey, neighbors, merged, {
       ...base,
@@ -149,21 +158,22 @@ export default function FeedPage() {
     });
     return { taste, curators };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, extraTitles, snapshots, catalog, ratings, neighbors, meta, JSON.stringify(rankFilters), picks, weights, hideWatchlist, watchlist]);
+  }, [ready, extraTitles, snapshots, catalog, ratings, neighbors, meta, JSON.stringify(rankFilters), picks, weights]);
 
   const initialLoaded = ready && (neighborsLoaded || ratedKeys.length === 0);
   const filtersSig = JSON.stringify(rankFilters);
   const currentList = (t: Tab, r: typeof recs) => (t === "ratings" ? r.taste : r.curators);
+  const pin = () => ({ ...recs, sig: ratedSig, hidden: new Set<TitleKey>(hideWatchlist ? watchlist.map((w) => w.key) : []) });
 
   // First pin, once the data is ready. After that the list never re-ranks by itself:
   // rating a card leaves it in place (dimmed) and offers "Update recommendations".
   useEffect(() => {
-    if (!pinned && initialLoaded) setPinned({ ...recs, sig: ratedSig });
+    if (!pinned && initialLoaded) setPinned(pin());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLoaded, pinned]);
   // Explicit re-rank triggers: the Update button, filter changes, the watchlist toggle.
   useEffect(() => {
-    if (pinned) setPinned({ ...recs, sig: ratedSig });
+    if (pinned) setPinned(pin());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [generation, filtersSig, hideWatchlist]);
   // Offer a re-rank once the new rating's neighbour data has loaded (no ratings left = nothing to load).
@@ -237,14 +247,21 @@ export default function FeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stale, activeTab]);
 
-  const tasteCandidates = pinned?.taste ?? [];
-  const curatorCandidates = pinned?.curators ?? [];
+  const hidden = pinned?.hidden ?? new Set<TitleKey>();
+  // Order: ranked candidates -> hide watchlist -> category chips. Chip counts follow the hide setting.
+  const tasteCandidates = withoutHidden(pinned?.taste ?? [], hidden);
+  const curatorCandidates = withoutHidden(pinned?.curators ?? [], hidden);
   const tasteList = filterByCategories(tasteCandidates, selectedCats);
   const curatorList = filterByCategories(curatorCandidates, selectedCats);
   const followed = curatorList.filter((r) => r.curators.some(isFollowed));
   const others = curatorList.filter((r) => !r.curators.some(isFollowed));
   const tabCandidates = activeTab === "ratings" ? tasteCandidates : curatorCandidates;
   const categoryEmpty = selectedCats.length > 0 && tabCandidates.length > 0 && (activeTab === "ratings" ? tasteList : curatorList).length === 0;
+  // Everything that matches is already on the watchlist -> offer to show them instead of a dead end.
+  const tabAll = pinned ? currentList(activeTab, pinned) : [];
+  const hiddenCount = tabAll.length - tabCandidates.length;
+  const watchlistEmpty =
+    hidden.size > 0 && (activeTab === "ratings" ? tasteList : curatorList).length === 0 && filterByCategories(tabAll, selectedCats).length > 0;
 
   if (error) return <p className="error">Couldn&apos;t load the data artifact: {error}</p>;
   if (!ready) return <p className="muted">Loading…</p>;
@@ -300,6 +317,12 @@ export default function FeedPage() {
           📌 From curators
         </button>
       </div>
+      <label className="feed-option small muted">
+        <input type="checkbox" checked={hideWatchlist} onChange={(e) => setHideWatchlist(e.target.checked)} />
+        <span>
+          Hide titles on my watchlist{hideWatchlist && hiddenCount > 0 ? ` (${hiddenCount} hidden)` : ""}
+        </span>
+      </label>
       {pinned ? (
         <CategoryBar
           titles={tabCandidates.map((r) => r.title)}
@@ -311,10 +334,6 @@ export default function FeedPage() {
         />
       ) : null}
       <Filters value={filters} onChange={updateFilters} />
-      <label className="row small muted" style={{ marginBottom: "var(--space-3)" }}>
-        <input type="checkbox" checked={hideWatchlist} onChange={(e) => setHideWatchlist(e.target.checked)} /> Hide titles on my
-        watchlist
-      </label>
       {loadError ? (
         <div className="notice small">
           <p className="error">Couldn&apos;t load recommendation data ({loadError}). Check your connection.</p>
@@ -326,6 +345,21 @@ export default function FeedPage() {
 
       {!pinned ? (
         <p className="muted">Loading recommendations…</p>
+      ) : watchlistEmpty ? (
+        <div className="notice" role="status">
+          <p>
+            <strong>All matches are on your watchlist</strong>
+            {selectedCats.length ? ` for ${joinOr(selectedCats.map(categoryLabel))}` : ""}.
+          </p>
+          <div className="row">
+            <button type="button" className="btn" onClick={() => setHideWatchlist(false)}>
+              Show them
+            </button>
+            <Link className="btn secondary" href="/watchlist/">
+              Open watchlist
+            </Link>
+          </div>
+        </div>
       ) : categoryEmpty ? (
         <div className="notice" role="status">
           <p>

@@ -1168,3 +1168,19 @@ select:focus-visible {
   font-size: 0.95rem;
   color: var(--muted);
 }
+
+/* Compact "Hide titles on my watchlist" toggle: same place on both feed tabs, 44px tap target. */
+.feed-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+  margin: 0 0 var(--space-1);
+  cursor: pointer;
+}
+.feed-option input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+}
