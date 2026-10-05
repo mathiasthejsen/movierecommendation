@@ -91,7 +91,7 @@ export function DataUpdatePanel() {
     const r = await triggerPipeline();
     setBusy(false);
     if (r.kind === "started") {
-      setMessage("Started. This takes about 5–15 minutes.");
+      setMessage("Started. This takes about 10–20 minutes.");
       wasActive.current = true;
       // GitHub needs a few seconds to register the run.
       window.setTimeout(() => void refresh(), 5000);
@@ -108,7 +108,10 @@ export function DataUpdatePanel() {
 
   const cooldown = status.cooldownRemainingSeconds;
   const label = runLabel(status.run, status.active);
-  const parts = [meta?.generatedAt ? `Last data update: ${timeAgo(meta.generatedAt, now)}` : "", label].filter(Boolean);
+  const parts = [
+    meta?.generatedAt ? `Last data update: ${timeAgo(meta.generatedAt, now)} (refreshes daily)` : "Data refreshes daily",
+    label,
+  ].filter(Boolean);
   return (
     <section className="notice stack data-update" aria-labelledby="data-update-heading">
       <h2 id="data-update-heading" style={{ margin: 0 }}>
@@ -117,7 +120,10 @@ export function DataUpdatePanel() {
       <p className="small muted status-line" aria-live="polite">
         {parts.join(" · ")}
       </p>
-      <p className="small">Refreshes films, series and curator picks (takes ~5–15 min). Your votes apply instantly without this.</p>
+      <p className="small">
+        Data refreshes automatically every day. Update now if you can&apos;t wait: it refreshes films, series and curator picks (takes
+        ~10–20 min). Your votes apply instantly without this.
+      </p>
       <div className="row">
         <button type="button" className="btn" onClick={start} disabled={busy || status.active || cooldown > 0}>
           {status.active ? "Updating…" : busy ? "Starting…" : "Update data now"}

@@ -1,9 +1,13 @@
-# Weekly data pipeline + static site deploy to GitHub Pages.
+# Daily data pipeline + static site deploy to GitHub Pages.
 #
 # Triggers:
 #   * push to main          -> test, build and deploy the site (reuses the last published data).
 #                              If no real data has been published yet, the pipeline runs first.
-#   * weekly schedule       -> run the data pipeline, publish data to the `data` branch, then build + deploy
+#   * daily schedule        -> run the data pipeline, publish data to the `data` branch, then build + deploy.
+#                              Daily runs refresh TMDB (new releases, providers, metadata), Reddit edges
+#                              and curator RSS; the MovieLens similarity is cached and only recomputed
+#                              weekly (ML_REFRESH_DAYS) or when its parameters change, so the 240 MB
+#                              ml-32m download is only restored/fetched on those runs.
 #   * manual (Run workflow) -> same as schedule; untick "run_pipeline" to only rebuild the site
 #
 # Repository secrets (Settings -> Secrets and variables -> Actions -> Secrets):
@@ -21,7 +25,7 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    - cron: "17 4 * * 1" # Mondays 04:17 UTC
+    - cron: "17 4 * * *" # daily 04:17 UTC
   workflow_dispatch:
     inputs:
       run_pipeline:
@@ -101,18 +105,34 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Cache MovieLens download and API caches
+      # API caches (TMDB/Trakt/search) + derived MovieLens neighbours. Saved under a new key each
+      # run and restored from the latest one, so caches roll forward day to day.
+      - name: Restore API caches and MovieLens neighbours
         if: steps.keys.outputs.skip != 'true'
         uses: actions/cache@v4
         with:
-          path: |
-            data/raw
-            data/cache
-          key: pipeline-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: pipeline-${{ runner.os }}-
+          path: data/cache
+          key: pipeline-cache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: pipeline-cache-${{ runner.os }}-
+
+      - name: Does the MovieLens similarity need recomputing?
+        id: ml
+        if: steps.keys.outputs.skip != 'true'
+        env:
+          ML_REFRESH_DAYS: "7"
+        run: python -m pipeline.mlcache status
+
+      # The raw zip never changes for a given URL, so it is cached under a constant key
+      # (bump the suffix if pipeline/download.py URL changes) and only touched on rebuild runs.
+      - name: Restore MovieLens ml-32m zip
+        if: steps.keys.outputs.skip != 'true' && steps.ml.outputs.need_raw == 'true'
+        uses: actions/cache@v4
+        with:
+          path: data/raw/ml-32m.zip
+          key: movielens-ml-32m-zip-v1
 
       - name: Download MovieLens ml-32m
-        if: steps.keys.outputs.skip != 'true'
+        if: steps.keys.outputs.skip != 'true' && steps.ml.outputs.need_raw == 'true'
         run: python -m pipeline.download
 
       - name: Build artifact
@@ -129,6 +149,7 @@ jobs:
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           WATCH_REGION: ${{ vars.WATCH_REGION || 'US' }}
+          ML_REFRESH_DAYS: "7"
         run: python -m pipeline.build
 
       - name: Publish artifact to the `data` branch

@@ -10,11 +10,11 @@ Reel Picks is a small PWA for two people (you and your family) that suggests fil
 Every recommendation shows its reason, for example
 `Because you liked Donnie Darko and Primer · Reddit + MovieLens · Picked by @sortedcinema · Hidden gem`.
 
-The site is a **static Next.js export on GitHub Pages**. Ranking runs **in the browser** against a static data artifact. A weekly **GitHub Actions** pipeline rebuilds that artifact. **Supabase** (free tier) handles magic-link login, ratings and watchlist sync, and shared curator picks. A small Supabase **Edge Function** proxies TMDB for live search, so the TMDB key never reaches the browser.
+The site is a **static Next.js export on GitHub Pages**. Ranking runs **in the browser** against a static data artifact. A daily **GitHub Actions** pipeline rebuilds that artifact. **Supabase** (free tier) handles magic-link login, ratings and watchlist sync, and shared curator picks. A small Supabase **Edge Function** proxies TMDB for live search, so the TMDB key never reaches the browser.
 
 ```mermaid
 flowchart LR
-  subgraph Weekly GitHub Action
+  subgraph Daily GitHub Action
     ML[MovieLens ml-32m] --> P[pipeline/]
     R[Reddit API] --> P
     T[TMDB API] --> P
@@ -100,9 +100,9 @@ score   = base · (1 + 0.3·gem)                           gem = high TMDB ratin
 - **For you** has two tabs. **Based on my ratings** ranks only by similarity to what you rated; curators have no effect on it. **From curators** shows only curator picks, ordered by how well they fit your ratings, split into "Picks by followed curators" (`own: true`) and "Picks by other curators".
 - Rating a card on the feed doesn't reshuffle the list: the card stays in place, dimmed, and an **Update recommendations** button re-ranks when you're ready.
 - **↻ Refresh** (always visible on For you) pulls your latest ratings and picks from Supabase, so votes made on another device or picks your partner shared show up. It then loads neighbour data for any newly rated titles and re-ranks. Votes never need the data pipeline: ranking runs in the browser.
-- When a newer weekly data build is deployed, the app shows **New data available: Reload**. It checks when you return to the app and every 10 minutes.
+- When a newer daily data build is deployed, the app shows **New data available: Reload**. It checks when you return to the app and every 10 minutes.
 - The **Picks** page lists every pick, with a curator multiselect (all selected by default; your selection is remembered).
-- **More like this** on any card opens `/similar/?key=movie:603`, a list ranked only by similarity to that one title. Titles you've already rated are faded. If the title isn't in the weekly data, the page asks TMDB through the Edge Function instead.
+- **More like this** on any card opens `/similar/?key=movie:603`, a list ranked only by similarity to that one title. Titles you've already rated are faded. If the title isn't in the daily data, the page asks TMDB through the Edge Function instead.
 - **Hidden gems:** a high TMDB rating with relatively few votes. Series get their vote counts scaled up (TMDB series collect about 6× fewer votes than films), and titles from the last year don't count, because few votes there just means new.
 - If you rate something the artifact doesn't cover (found through live search), the app asks the Edge Function for TMDB recommendations and similar titles as a fallback.
 
@@ -173,7 +173,7 @@ Supabase's built-in email service is meant for testing: it **only sends to membe
 
 ### "Update data now" (optional)
 
-Signed-in family members can start the data pipeline from **Me → Update data** instead of waiting for Monday. It refreshes films, series and curator picks and takes about 5–15 minutes. Votes don't need it, because they apply instantly. The button is hidden until you set this up.
+Signed-in family members can start the data pipeline from **Me → Update data** instead of waiting for the next daily run. It refreshes films, series and curator picks and takes about 10–20 minutes. Votes don't need it, because they apply instantly. The button is hidden until you set this up.
 
 1. **Create a fine-grained personal access token** on the GitHub account that owns the repo: **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
    - *Resource owner:* your account. *Expiration:* up to a year; set a reminder to renew it.
@@ -248,7 +248,7 @@ Cloudflare Pages' free tier can build from a **private** GitHub repo, and the st
 
 1. In the Cloudflare dashboard, go to **Workers & Pages → Create → Pages → Connect to Git** and pick the repo.
 2. Set the build command to `npm run build` and the output directory to `out`. Add the environment variables `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `NODE_VERSION=22`. Leave `NEXT_PUBLIC_BASE_PATH` empty, because the site is served at the root.
-3. Keep the GitHub Actions `pipeline` job for weekly data, and let Cloudflare rebuild on push. Alternatively, delete the `build` and `deploy` jobs. Update the Supabase redirect URLs and `ALLOWED_ORIGINS` to your `*.pages.dev` domain.
+3. Keep the GitHub Actions `pipeline` job for daily data, and let Cloudflare rebuild on push. Alternatively, delete the `build` and `deploy` jobs. Update the Supabase redirect URLs and `ALLOWED_ORIGINS` to your `*.pages.dev` domain.
 
 The artifact is still publicly downloadable from the deployed site. To keep it private as well, put the site behind **Cloudflare Access** (free for small teams).
 
@@ -261,7 +261,22 @@ python -m pipeline.download        # ~240 MB ml-32m into data/raw/ (git-ignored)
 python -m pipeline.build           # writes public/data/
 ```
 
-Optional sources are skipped with a warning when their keys are missing. TMDB responses are cached in `data/cache/`, which is git-ignored and cached in Actions. The first full run makes several thousand TMDB requests; later weekly runs mostly hit the cache. Useful settings are `WATCH_REGION`, `MIN_RATINGS` (default 300), `TOP_K` (50), `MAX_MOVIES` (9000), `TMDB_TV_PAGES` and `MAX_ARTIFACT_MB`. To use the full MovieLens **tag genome**, download ml-25m and set `GENOME_DIR` to the folder containing `genome-scores.csv`. Without it, the pipeline builds TF-IDF tag vectors from ml-32m `tags.csv`, because ml-32m itself ships no genome.
+Optional sources are skipped with a warning when their keys are missing. TMDB responses are cached in `data/cache/`, which is git-ignored and cached in Actions. The first full run makes several thousand TMDB requests; later daily runs mostly hit the cache. Useful settings are `WATCH_REGION`, `MIN_RATINGS` (default 300), `TOP_K` (50), `MAX_MOVIES` (9000), `TMDB_TV_PAGES` and `MAX_ARTIFACT_MB`. To use the full MovieLens **tag genome**, download ml-25m and set `GENOME_DIR` to the folder containing `genome-scores.csv`. Without it, the pipeline builds TF-IDF tag vectors from ml-32m `tags.csv`, because ml-32m itself ships no genome.
+
+### Daily schedule and caching
+
+The workflow runs **every day at 04:17 UTC** (`cron: "17 4 * * *"`). Each run is kept cheap and polite:
+
+| Part | How often it really refreshes | Why |
+| --- | --- | --- |
+| TMDB new releases, popular lists | daily (1-day cache) | new films and series show up within a day |
+| TMDB details + watch providers, recommendations/similar | every 3–5 days per title (cache TTL spread by a hash) | ~¼ of the catalogue per day instead of everything at once |
+| Reddit edges | daily (if configured) | |
+| Letterboxd curator RSS | at most once a day per curator, sequential with a 2 s delay | `curators.json → lastFetched` |
+| Trakt related shows | every 13 days per show | |
+| **MovieLens similarity** | **weekly** (`ML_REFRESH_DAYS`, default 7) or when the URL/parameters change | the derived neighbours are cached in `data/cache/movielens/`; the ~240 MB ml-32m zip is only restored (from its own Actions cache, constant key) on those runs |
+
+`python -m pipeline.mlcache status` reports whether the next run recomputes MovieLens (`rebuild=`) and needs the raw download (`need_raw=`); the workflow uses it to skip the download. Expected duration on GitHub's runners: **~10–15 min** for a normal daily pipeline job (+~5 min on the weekly MovieLens recompute, +~10 min if Reddit is configured), then ~4 min to build and deploy the site. A cold first run (empty caches) takes ~35–40 min. The job timeout is 120 min. Publishing force-pushes a single commit to the `data` branch, so its history doesn't grow.
 
 ## Curators
 
@@ -280,7 +295,7 @@ The curator list lives in **[`config/curators.json`](config/curators.json)**, th
 
 The list currently holds your own curators (goosebumpscinema, treynesbitmovies, sortedcinema, thematthewshepherd, doradane_film, ethanneville, moviesaretherapy, nikofilmreviews, jacobstolworthy) and discovered ones (maddikoch, schaffrillas, karsten, thomasflight, davidehrlich, mattsinger, lilfilm, strangeharbors, mscorsese, davidlsims, zoerosebryant, silentdawn, suspirliam, framesofnick, jay, demiadejuyigbe, aaronkelly, jimmycthatsme, girlactress, itscharlibb, kodak_cameron, specificliz). Every Letterboxd feed in the list was checked on 2026-09-28. The `handle` doesn't have to match the Letterboxd username: Jacob Stolworthy's Letterboxd is `screenworthy`, and Aaron Kelly's is `aaron`. Entries marked `verify: true` are worth double-checking. `nikofilmreviews` has no confirmed Letterboxd account, so fill one in if you find it.
 
-**Letterboxd RSS** is an official public feed, and no HTML is scraped. The pipeline fetches the feeds **sequentially with a 2 s delay**, identifies itself with a clear User-Agent, and fetches each curator **at most once a week**. That limit is tracked in `curators.json → lastFetched`. Diary entries rated **4★ or more**, or **liked**, become picks. The `tmdb:movieId` and `tmdb:tvId` tags are used when present; otherwise the pipeline matches title and year through TMDB. **List** entries (Martin Scorsese's feed is mostly lists) become lower-weight picks (0.5). Only 1980+ titles are kept. RSS returns only about the last 50 items, so picks **accumulate across weekly runs**: the previous `curators.json` is merged and de-duplicated per curator and title. Only keys, the star rating, the like flag and the link are stored, never review text.
+**Letterboxd RSS** is an official public feed, and no HTML is scraped. The pipeline fetches the feeds **sequentially with a 2 s delay**, identifies itself with a clear User-Agent, and fetches each curator **at most once a day**. That limit is tracked in `curators.json → lastFetched`. Diary entries rated **4★ or more**, or **liked**, become picks. The `tmdb:movieId` and `tmdb:tvId` tags are used when present; otherwise the pipeline matches title and year through TMDB. **List** entries (Martin Scorsese's feed is mostly lists) become lower-weight picks (0.5). Only 1980+ titles are kept. RSS returns only about the last 50 items, so picks **accumulate across daily runs**: the previous `curators.json` is merged and de-duplicated per curator and title. Only keys, the star rating, the like flag and the link are stored, never review text.
 
 ## Install the PWA on your phone and share posts to it
 
@@ -312,7 +327,7 @@ The share target is declared in the generated `manifest.webmanifest` (from `src/
 
 ```
 config/curators.json        curator list (single source of truth)
-pipeline/                   Python data pipeline (weekly in Actions)
+pipeline/                   Python data pipeline (daily in Actions)
   build.py                  entry point (--sample for offline mode)
   movielens.py              item-item similarity (ratings + tags)
   reddit.py extract.py      Reddit mining + title extraction (films vs series)

@@ -18,6 +18,7 @@ from collections import Counter
 from pathlib import Path
 
 from . import curators as cur
+from . import mlcache
 from .artifact import TMDB_GENRES, Title, merge_edges, title_from_details, tmdb_rank_edges, write_artifact
 from .config import Config
 from .extract import load_llm_extractor
@@ -89,16 +90,15 @@ def run_full(cfg: Config) -> int:
     resolver = TMDBResolver(tmdb, cfg.min_year)
     region = cfg.watch_region
 
-    # 1. MovieLens item-item neighbours (films).
-    ml_neighbors: dict[str, list[tuple[str, float]]] = {}
-    ml_years: dict[str, int] = {}
-    if (cfg.movielens_dir / "ratings.csv").exists():
-        ml_movies, ml_neighbors = build_neighbors(
-            cfg.movielens_dir, cfg.genome_dir, cfg.min_year, cfg.min_ratings, cfg.max_movies, cfg.top_k
-        )
-        ml_years = {f"movie:{m.tmdb_id}": m.year for m in ml_movies}
-    else:
-        log.warning("MovieLens not found at %s; run `python -m pipeline.download`. Skipping.", cfg.movielens_dir)
+    # 1. MovieLens item-item neighbours (films). Cached: recomputed weekly or when the
+    #    parameters/URL change, so the daily run doesn't need the 240 MB download.
+    def build_ml(c: Config):
+        if not mlcache.raw_present(c):
+            return None
+        movies, nbrs = build_neighbors(c.movielens_dir, c.genome_dir, c.min_year, c.min_ratings, c.max_movies, c.top_k)
+        return {f"movie:{m.tmdb_id}": m.year for m in movies}, nbrs
+
+    ml_years, ml_neighbors = mlcache.neighbors(cfg, build_ml)
     catalog: set[str] = set(ml_years)
 
     # 2. Recent popular films + TV series, with TMDB recommendations/similar for everything
@@ -139,7 +139,7 @@ def run_full(cfg: Config) -> int:
     else:
         log.warning("Reddit credentials not set; skipping Reddit edges.")
 
-    # 5. Curator picks (Letterboxd RSS, optional Instagram Business Discovery), accumulated weekly.
+    # 5. Curator picks (Letterboxd RSS, optional Instagram Business Discovery), accumulated across runs.
     curators = cur.load_curators()
     prev_picks, last_fetched = cur.load_previous(cfg.output_dir)
     new_picks: list[cur.Pick] = []

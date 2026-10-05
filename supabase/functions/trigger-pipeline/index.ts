@@ -1,4 +1,4 @@
-// Supabase Edge Function: start the weekly data pipeline on demand ("Update data now").
+// Supabase Edge Function: start the (normally daily) data pipeline on demand ("Update data now").
 //
 // * Requires a valid Supabase *user* session JWT (same check as tmdb-proxy); sign-ups are off,
 //   so only invited family members can call it. CORS only for ALLOWED_ORIGINS.

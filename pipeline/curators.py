@@ -10,7 +10,7 @@ Sources, all optional and driven by ``config/curators.json``:
   are set, and only for Business/Creator accounts): captions are parsed in
   memory for titles; only TMDB keys and permalinks are kept.
 
-Picks accumulate across weekly runs (RSS only returns ~50 recent items): the
+Picks accumulate across daily runs (RSS only returns ~50 recent items): the
 previous ``curators.json`` history in the artifact is merged and de-duplicated.
 Only keys, rating, like flag and links are stored: never review text or captions.
 """
@@ -36,12 +36,12 @@ from .extract import Candidate, extract_caption
 log = logging.getLogger(__name__)
 
 CURATORS_FILE = REPO_ROOT / "config" / "curators.json"
-USER_AGENT = "personal-movie-recommender/0.1 (+weekly RSS fetch; personal non-commercial use)"
+USER_AGENT = "personal-movie-recommender/0.1 (+daily RSS fetch; personal non-commercial use)"
 FETCH_DELAY_S = 2.0
 LIST_WEIGHT = 0.5
 MIN_STARS = 4.0
 MAX_PICKS_PER_CURATOR = 600
-MIN_REFETCH_DAYS = 6
+MIN_REFETCH_DAYS = 1  # the pipeline runs daily; one polite RSS read per curator per day
 GRAPH_API = "https://graph.facebook.com/v21.0"
 
 Resolver = Callable[[Candidate, "str | None"], "str | None"]
@@ -255,7 +255,7 @@ def collect_picks(
     year_of: Callable[[str], int | None] | None = None,
     last_fetched: dict[str, str] | None = None,
 ) -> list[Pick]:
-    """Fetch every enabled curator's feeds sequentially, politely, at most weekly.
+    """Fetch every enabled curator's feeds sequentially, politely, at most once a day.
 
     ``last_fetched`` (handle -> ISO date) is updated in place.
     """
@@ -270,7 +270,7 @@ def collect_picks(
             continue
         prev = last_fetched.get(c.handle)
         if prev and (today - date.fromisoformat(prev)).days < MIN_REFETCH_DAYS:
-            log.info("Curator @%s fetched on %s; skipping until next week", c.handle, prev)
+            log.info("Curator @%s fetched on %s; skipping until tomorrow", c.handle, prev)
             continue
         if not (c.letterboxd or (c.instagram and ig_user_id and ig_token)):
             continue

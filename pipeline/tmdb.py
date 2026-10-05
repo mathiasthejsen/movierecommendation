@@ -45,8 +45,15 @@ def result_year(r: dict) -> int | None:
     return int(d[:4]) if d[:4].isdigit() else None
 
 
+def jitter_fraction(name: str) -> float:
+    """Stable value in [0, 1) derived from a cache entry name."""
+    return int(hashlib.sha1(name.encode()).hexdigest()[:8], 16) / 0x100000000
+
+
 class TMDBClient:
-    def __init__(self, api_key: str = "", read_token: str = "", cache_dir: Path | None = None, ttl_days: float = 6):
+    def __init__(
+        self, api_key: str = "", read_token: str = "", cache_dir: Path | None = None, ttl_days: float = 3, ttl_jitter_days: float = 2
+    ):
         if not (api_key or read_token):
             raise ValueError("TMDB_API_KEY or TMDB_READ_TOKEN is required")
         self.session = requests.Session()
@@ -58,7 +65,10 @@ class TMDBClient:
         self.cache_dir = cache_dir / "tmdb" if cache_dir else None
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
+        # Default TTL is 3-5 days, fixed per cache entry (hash-based), so the daily run refreshes
+        # roughly a quarter of the titles each day instead of everything on the same day.
         self.ttl = ttl_days * 86400
+        self.ttl_jitter = ttl_jitter_days * 86400
         self.requests_made = 0
 
     def _cache_path(self, path: str, params: dict) -> Path | None:
@@ -70,7 +80,7 @@ class TMDBClient:
     def get(self, path: str, ttl: float | None = None, **params: Any) -> dict:
         params = {k: v for k, v in params.items() if v is not None}
         cp = self._cache_path(path, params)
-        ttl = self.ttl if ttl is None else ttl
+        ttl = (self.ttl + jitter_fraction(cp.name if cp else path) * self.ttl_jitter) if ttl is None else ttl
         if cp and cp.exists() and time.time() - cp.stat().st_mtime < ttl:
             return json.loads(cp.read_text("utf-8"))
         data: dict = {}
@@ -142,7 +152,7 @@ class TMDBClient:
         return out
 
     def recent_popular(self, pages: int, region: str) -> list[dict]:
-        """Popular and newly released films (weekly refresh keeps new releases covered)."""
+        """Popular and newly released films (the daily refresh keeps new releases covered)."""
         since = (date.today() - timedelta(days=730)).isoformat()
         out: list[dict] = []
         for page in range(1, pages + 1):

@@ -17,7 +17,7 @@ interface AppData {
   artifactPicks: CuratorPick[];
   session: Session | null;
   getTitle: (key: TitleKey) => Title | undefined;
-  /** A newer weekly data build has been deployed than the one this page loaded. */
+  /** A newer daily data build has been deployed than the one this page loaded. */
   newDataAvailable: boolean;
   checkForNewData: () => Promise<boolean>;
 }

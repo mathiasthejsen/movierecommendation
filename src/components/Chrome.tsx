@@ -58,7 +58,7 @@ export function Credits() {
   );
 }
 
-/** Shown app-wide once a newer weekly data build has been deployed. */
+/** Shown app-wide once a newer daily data build has been deployed. */
 export function NewDataBanner() {
   const { newDataAvailable } = useApp();
   if (!newDataAvailable) return null;

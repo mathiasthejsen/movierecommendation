@@ -133,7 +133,7 @@ export function pickTonight<T>(ranked: T[], rand: () => number = Math.random, n 
   return top[Math.min(top.length - 1, Math.floor(rand() * top.length))];
 }
 
-/** Fallback Title for rows that aren't in the weekly catalogue (e.g. added via live search). */
+/** Fallback Title for rows that aren't in the daily catalogue (e.g. added via live search). */
 export function titleFromItem(it: FamilyItem): Title {
   const [type, id] = it.key.split(":");
   return {
