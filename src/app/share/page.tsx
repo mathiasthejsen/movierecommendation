@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { CuratorInput, isValidHandle } from "@/components/CuratorInput";
 import { Poster, TypeBadge } from "@/components/TitleCard";
-import { SearchStatus, useTitleSearch } from "@/components/TitleSearch";
+import { SearchingHint, SearchStatus, useTitleSearch } from "@/components/TitleSearch";
 import { CURATORS, curatorAliases } from "@/lib/curators";
 import { detectCurator, extractCaption, parseSharedUrl, type Candidate } from "@/lib/extract";
 import { bestMatch } from "@/lib/match";
@@ -33,7 +33,7 @@ export default function SharePage() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [saved, setSaved] = useState(0);
   const [query, setQuery] = useState("");
-  const { results, status } = useTitleSearch(query, "both");
+  const { all, status, loading } = useTitleSearch(query, "both");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -139,7 +139,7 @@ export default function SharePage() {
         ))}
         <input type="search" placeholder="Missing one? Search to add it…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <SearchStatus status={status} />
-        {results.slice(0, 5).map((t) => (
+        {all.slice(0, 5).map((t) => (
           <div className="match" key={t.key}>
             <Poster title={t} size="w185" />
             <div className="grow">
@@ -150,6 +150,7 @@ export default function SharePage() {
             </button>
           </div>
         ))}
+        {query.trim().length >= 2 ? <SearchingHint loading={loading} status={status} /> : null}
         <button type="button" className="btn" disabled={!chosen.length || !isValidHandle(curator)} onClick={save}>
           Save {chosen.length || ""} pick{chosen.length === 1 ? "" : "s"}
           {curator ? ` from @${curator}` : ""}

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { CuratorInput, isValidHandle } from "@/components/CuratorInput";
 import { Poster, TitleCard, TypeBadge } from "@/components/TitleCard";
-import { MediaToggle, SearchStatus, useTitleSearch, type SearchType } from "@/components/TitleSearch";
+import { MediaToggle, SearchingHint, SearchStatus, useTitleSearch, type SearchType } from "@/components/TitleSearch";
 import { useAllPicks } from "@/components/usePicks";
 import { CURATORS, isFollowed } from "@/lib/curators";
 import { activePicks, addPicks, removePick, useStore } from "@/lib/store";
@@ -18,7 +18,7 @@ function AddPickForm() {
   const [query, setQuery] = useState("");
   const [type, setType] = useState<SearchType>("both");
   const [added, setAdded] = useState<string[]>([]);
-  const { results, status } = useTitleSearch(query, type);
+  const { all, status, loading } = useTitleSearch(query, type);
   const add = (t: Title) => {
     if (!isValidHandle(curator)) return;
     addPicks([{ title: t, curator, postUrl: null, source: "manual" }]);
@@ -32,7 +32,8 @@ function AddPickForm() {
         <input type="search" placeholder="Search the title they recommended…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <MediaToggle value={type} onChange={setType} />
         <SearchStatus status={status} />
-        {results.slice(0, 8).map((t) => (
+        {/* `all` only ever grows at the end, so slicing keeps visible rows in place. */}
+        {all.slice(0, 8).map((t) => (
           <div className="match" key={t.key}>
             <Poster title={t} size="w185" />
             <div className="grow">
@@ -44,6 +45,7 @@ function AddPickForm() {
             </button>
           </div>
         ))}
+        <SearchingHint loading={loading} status={status} />
       </div>
     </details>
   );

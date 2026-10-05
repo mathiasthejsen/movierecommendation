@@ -6,7 +6,7 @@ import { useApp } from "@/components/AppProvider";
 import { SampleBanner } from "@/components/Chrome";
 import { RatingControl } from "@/components/RatingControl";
 import { Poster, TypeBadge } from "@/components/TitleCard";
-import { MediaToggle, SearchStatus, useTitleSearch, type SearchType } from "@/components/TitleSearch";
+import { MediaToggle, SearchingHint, SearchStatus, useTitleSearch, type SearchType } from "@/components/TitleSearch";
 import { ONBOARDING_TARGET } from "@/lib/config";
 import { onboardingPicks } from "@/lib/search";
 import { activeRatings, updateSettings, useStore } from "@/lib/store";
@@ -31,12 +31,13 @@ export default function OnboardingPage() {
   const style = useStore((s) => s.settings.ratingStyle);
   const [query, setQuery] = useState("");
   const [type, setType] = useState<SearchType>("both");
-  const { results, status } = useTitleSearch(query, type);
+  const { results, more, status, loading } = useTitleSearch(query, type);
   const picks = useMemo(() => onboardingPicks(catalog.values(), 60), [catalog]);
 
   if (!ready) return <p className="muted">Loading…</p>;
   const pct = Math.min(100, Math.round((count / ONBOARDING_TARGET) * 100));
-  const list = query.trim().length >= 2 ? results : picks;
+  const searching = query.trim().length >= 2;
+  const list = searching ? results : picks;
   return (
     <>
       <h1>Rate {ONBOARDING_TARGET} titles you know</h1>
@@ -87,6 +88,17 @@ export default function OnboardingPage() {
           <Tile key={t.key} title={t} />
         ))}
       </div>
+      {searching ? <SearchingHint loading={loading} status={status} /> : null}
+      {searching && more.length ? (
+        <>
+          {results.length ? <h2 className="more-results">More results</h2> : null}
+          <div className="grid">
+            {more.map((t) => (
+              <Tile key={t.key} title={t} />
+            ))}
+          </div>
+        </>
+      ) : null}
     </>
   );
 }
