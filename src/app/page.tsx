@@ -6,6 +6,7 @@ import { useApp } from "@/components/AppProvider";
 import { CategoryBar } from "@/components/CategoryBar";
 import { SampleBanner } from "@/components/Chrome";
 import { Filters } from "@/components/Filters";
+import { HideWatchlistToggle, useHideWatchlist } from "@/components/HideWatchlistToggle";
 import { TV_NUDGE_RATED, TvRatingNudge } from "@/components/RatingTile";
 import { TitleCard } from "@/components/TitleCard";
 import { useAllPicks } from "@/components/usePicks";
@@ -16,7 +17,7 @@ import { isFollowed } from "@/lib/curators";
 import { refreshFamily } from "@/lib/family";
 import { refreshNotifications } from "@/lib/notifications";
 import { timeAgo } from "@/lib/pipeline";
-import { loadHideWatchlist, saveHideWatchlist, withoutHidden } from "@/lib/prefs";
+import { withoutHidden } from "@/lib/prefs";
 import {
   diversifyMedia,
   filterByCategories,
@@ -62,12 +63,10 @@ export default function FeedPage() {
   const snapshots = useStore((s) => s.titles);
   const { picks, weights } = useAllPicks();
   const [filters, setFilters] = useState<RankFilters>({});
-  // Default ON (migrated once from the old OFF default); applies to both tabs and the category counts.
-  const [hideWatchlist, setHideWatchlistState] = useState(true);
-  useEffect(() => setHideWatchlistState(loadHideWatchlist(window.localStorage)), []);
+  // Default ON (migrated once from the old OFF default); shared with Picks; applies to both tabs and the category counts.
+  const [hideWatchlist, setHideWatchlistPref] = useHideWatchlist();
   const setHideWatchlist = (v: boolean) => {
-    setHideWatchlistState(v);
-    saveHideWatchlist(window.localStorage, v);
+    setHideWatchlistPref(v);
     setShown(PAGE);
   };
   const [neighbors, setNeighbors] = useState<Map<TitleKey, Edge[]>>(new Map());
@@ -327,12 +326,7 @@ export default function FeedPage() {
           📌 From curators
         </button>
       </div>
-      <label className="feed-option small muted">
-        <input type="checkbox" checked={hideWatchlist} onChange={(e) => setHideWatchlist(e.target.checked)} />
-        <span>
-          Hide titles on my watchlist{hideWatchlist && hiddenCount > 0 ? ` (${hiddenCount} hidden)` : ""}
-        </span>
-      </label>
+      <HideWatchlistToggle checked={hideWatchlist} hiddenCount={hiddenCount} onChange={setHideWatchlist} />
       {pinned ? (
         <CategoryBar
           titles={tabCandidates.map((r) => r.title)}

@@ -43,3 +43,16 @@ export function saveHideWatchlist(store: KV | null | undefined, value: boolean):
 export function withoutHidden<T extends { title: { key: string } }>(list: T[], hidden: ReadonlySet<string>): T[] {
   return hidden.size ? list.filter((r) => !hidden.has(r.title.key)) : list;
 }
+
+const hideListeners = new Set<(value: boolean) => void>();
+
+/** Save the shared "hide watchlist titles" preference and tell every open page (For you, Picks). */
+export function setHideWatchlistPref(store: KV | null | undefined, value: boolean): void {
+  saveHideWatchlist(store, value);
+  hideListeners.forEach((l) => l(value));
+}
+
+export function onHideWatchlistChange(listener: (value: boolean) => void): () => void {
+  hideListeners.add(listener);
+  return () => hideListeners.delete(listener);
+}

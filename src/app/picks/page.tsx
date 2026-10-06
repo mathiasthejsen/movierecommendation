@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { CuratorInput, isValidHandle } from "@/components/CuratorInput";
+import { HideWatchlistToggle, useHideWatchlist } from "@/components/HideWatchlistToggle";
 import { Poster, TitleCard, TypeBadge } from "@/components/TitleCard";
 import { MediaToggle, SearchingHint, SearchStatus, useTitleSearch, type SearchType } from "@/components/TitleSearch";
 import { useAllPicks } from "@/components/usePicks";
 import { CURATORS, isFollowed } from "@/lib/curators";
-import { activePicks, addPicks, removePick, useStore } from "@/lib/store";
-import { supabaseConfigured } from "@/lib/config";
+import { curatorCounts, groupPicks, type PickGroup } from "@/lib/pickGroups";
+import { activePicks, activeWatchlist, addPicks, getState, removePick, useStore } from "@/lib/store";
 import type { Title } from "@/lib/types";
 
 function AddPickForm() {
@@ -49,12 +50,6 @@ function AddPickForm() {
       </div>
     </details>
   );
-}
-
-interface PickGroup {
-  title: Title;
-  curators: Set<string>;
-  followed: boolean;
 }
 
 const PAGE = 24;
@@ -154,42 +149,35 @@ export default function PicksPage() {
     setExcluded(next);
     localStorage.setItem(EXCLUDED_KEY, JSON.stringify([...next]));
   };
-  const counts = useMemo(() => {
-    const perCurator = new Map<string, Set<string>>();
-    for (const p of picks) {
-      const s = perCurator.get(p.curator) ?? new Set<string>();
-      s.add(p.key);
-      perCurator.set(p.curator, s);
-    }
-    return new Map([...perCurator].map(([h, s]) => [h, s.size]));
-  }, [picks]);
+  // "Hide titles on my watchlist" (shared with For you). The hidden set is a snapshot, taken when
+  // the page opens, when the setting changes and when you come back to the app, so adding a pick
+  // to your watchlist here doesn't make it vanish under your finger.
+  const [hideWatchlist, setHideWatchlist] = useHideWatchlist();
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [snapTick, setSnapTick] = useState(0);
+  useEffect(() => {
+    setHidden(hideWatchlist ? new Set(activeWatchlist(getState()).map((w) => w.key)) : new Set());
+  }, [hideWatchlist, snapTick, ready]);
+  useEffect(() => {
+    const onVisible = () => document.visibilityState === "visible" && setSnapTick((n) => n + 1);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
-  const grouped = useMemo(() => {
-    const byKey = new Map<string, PickGroup>();
-    for (const p of picks) {
-      if (excluded.has(p.curator)) continue;
-      const t = getTitle(p.key);
-      if (!t) continue;
-      const g = byKey.get(p.key) ?? { title: t, curators: new Set<string>(), followed: false };
-      g.curators.add(p.curator);
-      g.followed ||= isFollowed(p.curator);
-      byKey.set(p.key, g);
-    }
-    return [...byKey.values()].sort((a, b) => b.curators.size - a.curators.size || b.title.votes - a.title.votes);
-  }, [picks, excluded, getTitle]);
+  const counts = useMemo(() => curatorCounts(picks, hidden), [picks, hidden]);
+  const grouped = useMemo(() => groupPicks(picks, getTitle, { excluded, hidden }), [picks, excluded, hidden, getTitle]);
+  const groupedAll = useMemo(() => groupPicks(picks, getTitle, { excluded }), [picks, excluded, getTitle]);
 
   if (!ready) return <p className="muted">Loading…</p>;
-  const myOwn = mine.filter((p) => p.pending || !p.addedBy || p.addedBy === (session?.user.id ?? ownerId));
+  const hiddenCount = groupedAll.length - grouped.length;
+  const allHidden = hideWatchlist && grouped.length === 0 && groupedAll.length > 0;
+  const myOwn = mine.filter((p) => (p.pending || !p.addedBy || p.addedBy === (session?.user.id ?? ownerId)) && !hidden.has(p.key));
   // Remount sections when the selection changes so their "Show more" pagination resets.
   const selectionKey = [...excluded].sort().join(",");
   return (
     <>
       <h1>Curator picks</h1>
-      <p className="muted small">
-        Share an Instagram or TikTok post to this app (Share → Reel Picks) or add picks by hand. Picks also come from
-        curators&apos; public Letterboxd feeds.
-        {supabaseConfigured && !session ? " Sign in to share picks with your family." : ""}
-      </p>
+      <HideWatchlistToggle checked={hideWatchlist} hiddenCount={hiddenCount} onChange={setHideWatchlist} />
       <AddPickForm />
       {counts.size ? <CuratorFilter counts={counts} excluded={excluded} onChange={updateExcluded} /> : null}
       {myOwn.length ? (
@@ -225,14 +213,39 @@ export default function PicksPage() {
           </div>
         </>
       ) : null}
-      <PickSection
-        key={`followed-${selectionKey}`}
-        heading="📌 Picks by followed curators"
-        groups={grouped.filter((g) => g.followed)}
-        empty="No picks from the selected curators you follow — share a post to the app or add one above."
-      />
-      <PickSection key={`others-${selectionKey}`} heading="Picks by other curators" groups={grouped.filter((g) => !g.followed)} empty="" />
-      {!grouped.length ? (
+      {allHidden ? (
+        <div className="notice" role="status">
+          <p>
+            <strong>All picks are on your watchlist</strong>
+            {excluded.size ? " for the selected curators" : ""}.
+          </p>
+          <div className="row">
+            <button type="button" className="btn" onClick={() => setHideWatchlist(false)}>
+              Show them
+            </button>
+            <Link className="btn secondary" href="/watchlist/">
+              Open watchlist
+            </Link>
+          </div>
+        </div>
+      ) : null}
+      {allHidden ? null : (
+        <>
+          <PickSection
+            key={`followed-${selectionKey}-${hideWatchlist}`}
+            heading="📌 Picks by followed curators"
+            groups={grouped.filter((g) => g.followed)}
+            empty="No picks from the selected curators you follow — share a post to the app or add one above."
+          />
+          <PickSection
+            key={`others-${selectionKey}-${hideWatchlist}`}
+            heading="Picks by other curators"
+            groups={grouped.filter((g) => !g.followed)}
+            empty=""
+          />
+        </>
+      )}
+      {!groupedAll.length ? (
         <p className="muted small">
           Tip: see <Link href="/account/">Me</Link> for how to install the app so it appears in your phone&apos;s Share sheet.
         </p>
