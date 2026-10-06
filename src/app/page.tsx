@@ -409,7 +409,7 @@ export default function FeedPage() {
             <div className="list">{followed.slice(0, shown).map(card)}</div>
           ) : (
             <p className="muted">
-              No picks from the curators you follow yet. Share a post to the app or use <Link href="/picks/">Picks → Add pick</Link>.
+              No picks from the curators you follow yet. Share a post to the app or use <Link href="/picks/#add-pick">Picks → Add pick</Link>.
             </p>
           )}
           {more(followed.length)}

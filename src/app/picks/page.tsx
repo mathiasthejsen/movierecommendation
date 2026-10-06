@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { CuratorInput, isValidHandle } from "@/components/CuratorInput";
 import { HideWatchlistToggle, useHideWatchlist } from "@/components/HideWatchlistToggle";
@@ -25,8 +25,22 @@ function AddPickForm() {
     addPicks([{ title: t, curator, postUrl: null, source: "manual" }]);
     setAdded((a) => [...a, t.key]);
   };
+  // Collapsed by default; links to /picks/#add-pick open it and focus the first field.
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const openFromHash = () => {
+      const el = ref.current;
+      if (!el || window.location.hash !== "#add-pick") return;
+      el.open = true;
+      el.scrollIntoView({ block: "start" });
+      el.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+    };
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, []);
   return (
-    <details className="filters" open={!lastCurator}>
+    <details className="filters" id="add-pick" ref={ref}>
       <summary>➕ Add pick</summary>
       <div className="stack" style={{ marginTop: 10 }}>
         <CuratorInput value={curator} onChange={setCurator} />
@@ -107,7 +121,7 @@ function CuratorFilter({
   };
   const selected = handles.filter((h) => !excluded.has(h)).length;
   return (
-    <details className="filters" open>
+    <details className="filters">
       <summary>
         Curators <span className="muted small">({selected} of {handles.length} selected)</span>
       </summary>
