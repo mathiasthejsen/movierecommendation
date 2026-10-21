@@ -10,12 +10,24 @@ import sys
 import zipfile
 from pathlib import Path
 
+import certifi
 import requests
 
 from .config import Config
 
 URL = "https://files.grouplens.org/datasets/movielens/ml-32m.zip"
+# files.grouplens.org chains to emSign ECC Root CA - G3, which certifi dropped in 2026.10.19.
+EXTRA_ROOTS = Path(__file__).parent / "certs" / "emsign-ecc-root-ca-g3.crt"
 log = logging.getLogger("pipeline.download")
+
+
+def ca_bundle(dest: Path) -> Path:
+    """certifi's roots plus EXTRA_ROOTS, written to dest."""
+    dest.write_text(
+        Path(certifi.where()).read_text(encoding="utf-8") + "\n" + EXTRA_ROOTS.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    return dest
 
 
 def main() -> int:
@@ -28,7 +40,8 @@ def main() -> int:
     zip_path = target.parent / "ml-32m.zip"
     if not zip_path.exists():
         log.info("Downloading %s (~240 MB)", URL)
-        with requests.get(URL, stream=True, timeout=60) as r:
+        verify = ca_bundle(target.parent / "ca-bundle.pem")
+        with requests.get(URL, stream=True, timeout=60, verify=str(verify)) as r:
             r.raise_for_status()
             with open(zip_path, "wb") as f:
                 for chunk in r.iter_content(1 << 20):
